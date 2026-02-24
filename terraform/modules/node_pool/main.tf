@@ -4,7 +4,7 @@ resource "google_container_node_pool" "system-pool" {
   cluster  = var.gke_cluster_name
 
   node_config {
-    preemptible  = true
+    spot  = false
     machine_type = var.system_node_type
     disk_size_gb = var.system_node_disk_size
     disk_type    = var.system_node_disk_type
@@ -16,11 +16,6 @@ resource "google_container_node_pool" "system-pool" {
     ]
     workload_metadata_config {
       mode = "GKE_METADATA" # This enables the Metadata Server
-    }
-    taint {
-      key    = "pool"
-      value  = "system"
-      effect = "NO_SCHEDULE"
     }
     labels = { pool = "system" }
   }
@@ -35,7 +30,7 @@ resource "google_container_node_pool" "inference-pool" {
   cluster  = var.gke_cluster_name
 
   node_config {
-    preemptible  = true
+    spot  = true
     machine_type = var.inference_node_type
     disk_size_gb = var.inference_node_disk_size
     disk_type    = var.inference_node_disk_type
