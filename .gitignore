@@ -1,0 +1,3 @@
+*.terraform*
+connect-gke.sh
+*.tfvars
