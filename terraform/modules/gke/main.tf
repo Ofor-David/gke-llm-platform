@@ -29,8 +29,8 @@ resource "google_container_cluster" "llm_cluster" {
       display_name = "bastion-host"
     }
   }
- # Enable GKE Dataplane V2 (replaces kube-proxy)
-  datapath_provider = "ADVANCED_DATAPATH" # Corresponds to GKE Dataplane, adds cilium
+  # Enable GKE Dataplane V2 (replaces kube-proxy)
+  datapath_provider     = "ADVANCED_DATAPATH" # Corresponds to GKE Dataplane, adds cilium
   enable_shielded_nodes = true
 
   deletion_protection = false
@@ -38,6 +38,7 @@ resource "google_container_cluster" "llm_cluster" {
   workload_identity_config {
     workload_pool = "${var.project_id}.svc.id.goog"
   }
-
+  gateway_api_config {
+    channel = "CHANNEL_STANDARD"
+  }
 }
-
