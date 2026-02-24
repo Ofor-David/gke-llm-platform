@@ -41,3 +41,20 @@ resource "google_service_account_iam_member" "github-ci-wib" {
   role               = "roles/iam.workloadIdentityUser"
   member             = "principalSet://iam.googleapis.com/${var.workload_identity_pool_name}/attribute.repository/${var.github_repo}"
 }
+
+// External Secrets
+resource "google_service_account" "secrets-sa" {
+  account_id = "secrets-sa"
+  display_name = "secrets-sa"
+}
+resource "google_service_account_iam_member" "secrets-wif" {
+  service_account_id = google_service_account.secrets-sa.name
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "serviceAccount:${var.project_id}.svc.id.goog[${var.secrets_namespace}/${var.secrets_ksa_name}]"
+}
+resource "google_project_iam_member" "secrets-sa-roles" {
+
+  project = var.project_id
+  role    = "roles/secretmanager.secretAccessor"
+  member  = "serviceAccount:${google_service_account.secrets-sa.email}"
+}

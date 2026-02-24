@@ -53,3 +53,13 @@ variable "github_repo" {
 variable "repo_owner_id" {
   type = string
 }
+
+// External Secrets
+variable "secrets_namespace" {
+  type = string
+  default = "external-secrets"
+}
+variable "secrets_ksa_name" {
+  type = string
+  default = "secrets-ksa"
+}

@@ -14,3 +14,11 @@ variable "workload_identity_pool_name" {
 variable "github_repo" {
   type = string
 }
+
+variable "secrets_namespace" {
+  type = string
+}
+
+variable "secrets_ksa_name" {
+  type = string
+}

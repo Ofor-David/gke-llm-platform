@@ -9,6 +9,8 @@ module "iam" {
   iap_allowed_users           = var.iap_allowed_users
   workload_identity_pool_name = module.artifact_registry.workload_identity_pool_name
   github_repo                 = var.github_repo
+  secrets_ksa_name            = var.secrets_ksa_name
+  secrets_namespace           = var.secrets_namespace
 }
 module "networking" {
   source     = "./modules/networking"
