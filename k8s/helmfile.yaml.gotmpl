@@ -1,0 +1,73 @@
+repositories:
+  - name: cert-manager
+    url: https://charts.jetstack.io
+  - name: prometheus-community
+    url: https://prometheus-community.github.io/helm-charts
+  - name: linkerd-edge 
+    url: https://helm.linkerd.io/edge
+  - name: external-secrets
+    url: https://charts.external-secrets.io
+
+releases:
+
+  # NGINX Gateway Fabric
+  # Note: Gateway API CRDs must be installed first via: ./install-gateway-crds.sh apply
+  - name: nginx-gateway-fabric
+    namespace: gateway-api
+    chart: ./helm_templates/nginx-gateway-fabric
+    version: 2.4.1
+    createNamespace: true
+    installed: true
+    wait: true
+    values:
+    - helm_templates/nginx-gateway-fabric/values.yaml
+
+  # Cert-Manager
+  - name: cert-manager
+    namespace: external-secrets
+    chart: cert-manager/cert-manager
+    version: 1.19.2
+    createNamespace: true
+    installed: true
+    wait: true
+    values:
+      - values/cert-manager.yaml
+  
+  # Kube-Prometheus Stack
+  - name: kube-prometheus
+    namespace: monitoring
+    chart: prometheus-community/kube-prometheus-stack
+    version: 82.1.0
+    createNamespace: true
+    installed: true
+    wait: true
+    values:
+      - values/kube-prometheus.yaml
+
+  # Linkerd CRDs
+  - name: linkerd-crds
+    namespace: linkerd
+    chart: linkerd-edge/linkerd-crds
+    version: 2026.2.1
+    createNamespace: true
+    installed: true
+    wait: true
+
+  # Linkerd Control Plane
+  # Run install-linkerd-control-plane.sh to install the linkerd control plane
+  
+  # linkerd viz(optional)
+  - name: linkerd-viz
+    namespace: linkerd
+    chart: linkerd-edge/linkerd-viz
+    version: 2026.2.1
+    createNamespace: false
+    installed: true
+    wait: true
+  # External secrets
+  - name: external-secrets
+    namespace: external-secrets
+    chart: external-secrets/external-secrets
+    createNamespace: false
+    installed: true
+    wait: true
