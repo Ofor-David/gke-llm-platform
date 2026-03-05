@@ -1,0 +1,31 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: llm-platform-gateway
+  namespace: gateway-api
+  annotations:
+    networking.gke.io/certmap: "" #TODO: add cert-manager integration next
+spec:
+  gatewayClassName: gke-persistent-regional-external-managed
+  addresses:                              
+  - type: "gke.networking.io/cidr"
+    value: "34.6.184.119/32"
+  listeners:
+    - name: https
+      protocol: HTTPS
+      port: 443
+      allowedRoutes:
+        namespaces:
+          from: All # allows HTTPRoutes from any namespace to attach
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: gateway-tls
+            namespace: gateway-api
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
