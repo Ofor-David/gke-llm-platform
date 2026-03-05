@@ -1309,10 +1309,11 @@ grafana:
 
   # Use an existing secret for the admin user.
   admin:
+  #TODO: Update the secret in secret manager
     ## Name of the secret. Can be templated.
-    existingSecret: ""
-    userKey: admin-user
-    passwordKey: admin-password
+    existingSecret: "grafana-admin-password"
+    userKey: user
+    passwordKey: password
 
   rbac:
     ## If true, Grafana PSPs will be created

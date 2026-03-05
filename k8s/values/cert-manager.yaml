@@ -482,11 +482,7 @@ affinity: {}
 #     operator: Equal
 #     value: master
 #     effect: NoSchedule
-tolerations:
-  - key: "pool"
-    operator: "Equal"
-    value: "system"
-    effect: "NoSchedule"
+#tolerations: {}
 
 # A list of Kubernetes TopologySpreadConstraints, if required. For more information, see [Topology spread constraint v1 core](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#topologyspreadconstraint-v1-core
 #
@@ -873,11 +869,8 @@ webhook:
   #     operator: Equal
   #     value: master
   #     effect: NoSchedule
-  tolerations:
-    - key: "pool"
-      operator: "Equal"
-      value: "system"
-      effect: "NoSchedule"
+  #tolerations: {}
+    
 
   # A list of Kubernetes TopologySpreadConstraints, if required. For more information, see [Topology spread constraint v1 core](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#topologyspreadconstraint-v1-core).
   #
@@ -1196,11 +1189,8 @@ cainjector:
   #     operator: Equal
   #     value: master
   #     effect: NoSchedule
-  tolerations:
-    - key: "pool"
-      operator: "Equal"
-      value: "system"
-      effect: "NoSchedule"
+  #tolerations: {}
+    
 
   # A list of Kubernetes TopologySpreadConstraints, if required. For more information, see [Topology spread constraint v1 core](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#topologyspreadconstraint-v1-core).
   #
@@ -1408,11 +1398,8 @@ startupapicheck:
   #     operator: Equal
   #     value: master
   #     effect: NoSchedule
-  tolerations:
-    - key: "pool"
-      operator: "Equal"
-      value: "system"
-      effect: "NoSchedule"
+  #tolerations: {}
+    
 
   # Optional additional labels to add to the startupapicheck Pods.
   podLabels: {}

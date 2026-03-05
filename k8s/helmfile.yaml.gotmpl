@@ -10,35 +10,36 @@ repositories:
 
 releases:
 
-  # NGINX Gateway Fabric
-  # Note: Gateway API CRDs must be installed first via: ./install-gateway-crds.sh apply
-  - name: nginx-gateway-fabric
-    namespace: gateway-api
-    chart: ./helm_templates/nginx-gateway-fabric
-    version: 2.4.1
-    createNamespace: true
-    installed: true
-    wait: true
-    values:
-    - helm_templates/nginx-gateway-fabric/values.yaml
-
   # Cert-Manager
   - name: cert-manager
-    namespace: external-secrets
+    namespace: cert-manager
     chart: cert-manager/cert-manager
     version: 1.19.2
-    createNamespace: true
+    createNamespace: false
     installed: true
     wait: true
     values:
       - values/cert-manager.yaml
+  
+  # Trust-Manager
+  - name: trust-manager
+    namespace: cert-manager
+    chart: cert-manager/trust-manager
+    version: 0.21.1
+    createNamespace: false
+    installed: true
+    wait: true
+    values:
+      - values/trust-manager.yaml
+    needs:
+      - cert-manager/cert-manager
   
   # Kube-Prometheus Stack
   - name: kube-prometheus
     namespace: monitoring
     chart: prometheus-community/kube-prometheus-stack
     version: 82.1.0
-    createNamespace: true
+    createNamespace: false
     installed: true
     wait: true
     values:
@@ -49,25 +50,41 @@ releases:
     namespace: linkerd
     chart: linkerd-edge/linkerd-crds
     version: 2026.2.1
-    createNamespace: true
-    installed: true
-    wait: true
-
-  # Linkerd Control Plane
-  # Run install-linkerd-control-plane.sh to install the linkerd control plane
-  
-  # linkerd viz(optional)
-  - name: linkerd-viz
-    namespace: linkerd
-    chart: linkerd-edge/linkerd-viz
-    version: 2026.2.1
     createNamespace: false
     installed: true
     wait: true
+    needs: 
+      - cert-manager/trust-manager
+
+  # Linkerd Control Plane
+  - name: linkerd-control-plane
+    namespace: linkerd
+    chart: linkerd-edge/linkerd-control-plane
+    version: 2026.2.1
+    createNamespace: false
+    values:
+      - identity:
+          externalCA: true
+          issuer:
+            scheme: kubernetes.io/tls
+    needs:
+      - linkerd/linkerd-crds
+      - cert-manager/trust-manager
+
+  # linkerd viz(optional)
+  #- name: linkerd-viz
+  #  namespace: linkerd
+  #  chart: linkerd-edge/linkerd-viz
+  #  version: 2026.2.1
+  #  createNamespace: false
+  #  installed: true
+  #  wait: true
+
   # External secrets
   - name: external-secrets
-    namespace: external-secrets
+    namespace: cert-manager
     chart: external-secrets/external-secrets
+    version: 2.0.0
     createNamespace: false
     installed: true
     wait: true
