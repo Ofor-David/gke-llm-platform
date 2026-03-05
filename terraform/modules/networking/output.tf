@@ -12,3 +12,7 @@ output "bastion_subnet_cidr" {
 output "bastion_subnet" {
   value = google_compute_subnetwork.bastion_subnet.id
 }
+
+output "gateway_static_ip" {
+  value = google_compute_address.gateway_static_ip.address
+}

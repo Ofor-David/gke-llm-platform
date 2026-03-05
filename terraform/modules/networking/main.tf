@@ -75,4 +75,10 @@ resource "google_compute_subnetwork" "bastion_subnet" {
   ip_cidr_range = "10.3.0.0/24" # small subnet for bastion
 }
 
+resource "google_compute_address" "gateway_static_ip" {
+  name    = "llm-gateway-ip"
+  region = var.region
+  network_tier = "PREMIUM"  # default
+}
+
 

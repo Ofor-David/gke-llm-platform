@@ -12,6 +12,12 @@ module "iam" {
   secrets_ksa_name            = var.secrets_ksa_name
   secrets_namespace           = var.secrets_namespace
 }
+module "dns" {
+  source     = "./modules/dns"
+  gateway_ip = module.networking.gateway_static_ip
+  project_id = var.project_id
+  dns_name   = var.dns_name
+}
 module "networking" {
   source     = "./modules/networking"
   depends_on = [module.enable_apis.prep]
@@ -62,4 +68,11 @@ module "artifact_registry" {
   github_branch = var.github_branch
   github_repo   = var.github_repo
   repo_owner_id = var.repo_owner_id
+}
+
+output "gateway_static_ip" {
+  value = module.networking.gateway_static_ip
+}
+output "primary_nameservers" {
+  value = module.dns.name_servers
 }

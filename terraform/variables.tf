@@ -56,10 +56,15 @@ variable "repo_owner_id" {
 
 // External Secrets
 variable "secrets_namespace" {
-  type = string
+  type    = string
   default = "external-secrets"
 }
 variable "secrets_ksa_name" {
-  type = string
+  type    = string
   default = "secrets-ksa"
+}
+
+//dns
+variable "dns_name" {
+  type = string
 }
