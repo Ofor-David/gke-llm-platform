@@ -1,0 +1,10 @@
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  # This is the name of the Issuer resource; it's the way
+  # Certificate resources can find this issuer.
+  name: linkerd-identity-issuer
+  namespace: cert-manager
+spec:
+  ca:
+    secretName: linkerd-trust-anchor

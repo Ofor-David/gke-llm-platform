@@ -1,0 +1,18 @@
+apiVersion: trust.cert-manager.io/v1alpha1
+kind: Bundle
+metadata:
+  name: linkerd-identity-trust-roots  # this also becomes the ConfigMap name
+spec:
+  sources:
+    - secret:
+        name: "linkerd-trust-anchor"
+        key: "tls.crt"
+    - secret:
+        name: "linkerd-previous-anchor"
+        key: "tls.crt"
+  target:
+    configMap:
+      key: "ca-bundle.crt"
+    namespaceSelector:
+      matchLabels:
+        linkerd.io/is-control-plane: "true"  # only write into the linkerd namespace

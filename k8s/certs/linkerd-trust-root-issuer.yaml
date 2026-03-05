@@ -1,0 +1,9 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: linkerd-trust-root-issuer
+  namespace: cert-manager
+spec:
+  selfSigned: {}
+  #ca:
+  #  secretName: linkerd-trust-anchor

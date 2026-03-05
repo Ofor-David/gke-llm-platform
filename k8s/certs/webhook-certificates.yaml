@@ -1,0 +1,65 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: linkerd-proxy-injector
+  namespace: linkerd
+spec:
+  secretName: linkerd-proxy-injector-k8s-tls
+  duration: 48h
+  renewBefore: 24h
+  issuerRef:
+    name: linkerd-trust-root-issuer
+    kind: Issuer
+  dnsNames:
+  - linkerd-proxy-injector.linkerd.svc
+  - linkerd-proxy-injector.linkerd.svc.cluster.local
+  usages:
+  - server auth
+  - client auth
+  privateKey:
+    algorithm: RSA
+    size: 2048
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: linkerd-sp-validator
+  namespace: linkerd
+spec:
+  secretName: linkerd-sp-validator-k8s-tls
+  duration: 48h
+  renewBefore: 24h
+  issuerRef:
+    name: linkerd-trust-root-issuer
+    kind: Issuer
+  dnsNames:
+  - linkerd-sp-validator.linkerd.svc
+  - linkerd-sp-validator.linkerd.svc.cluster.local
+  usages:
+  - server auth
+  - client auth
+  privateKey:
+    algorithm: RSA
+    size: 2048
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: linkerd-policy-validator
+  namespace: linkerd
+spec:
+  secretName: linkerd-policy-validator-k8s-tls
+  duration: 48h
+  renewBefore: 24h
+  issuerRef:
+    name: linkerd-trust-root-issuer
+    kind: Issuer
+  dnsNames:
+  - linkerd-policy-validator.linkerd.svc
+  - linkerd-policy-validator.linkerd.svc.cluster.local
+  usages:
+  - server auth
+  - client auth
+  privateKey:
+    algorithm: RSA
+    size: 2048
