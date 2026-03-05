@@ -19,4 +19,9 @@ metadata:
   name:  linkerd
   labels:
     linkerd.io/is-control-plane: "true"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name:  gateway-api
 
