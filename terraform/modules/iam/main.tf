@@ -58,3 +58,25 @@ resource "google_project_iam_member" "secrets-sa-roles" {
   role    = "roles/secretmanager.secretAccessor"
   member  = "serviceAccount:${google_service_account.secrets-sa.email}"
 }
+
+// DNS
+# Service account for cert-manager DNS-01 challenge
+resource "google_service_account" "cert_manager" {
+  account_id   = "cert-manager-dns"
+  display_name = "cert-manager Cloud DNS"
+  project      = var.project_id
+}
+
+# DNS admin to create TXT records
+resource "google_project_iam_member" "cert_manager_dns" {
+  project = var.project_id
+  role    = "roles/dns.admin"
+  member  = "serviceAccount:${google_service_account.cert_manager.email}"
+}
+
+# Workload Identity binding
+resource "google_service_account_iam_member" "cert_manager_wi" {
+  service_account_id = google_service_account.cert_manager.name
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "serviceAccount:${var.project_id}.svc.id.goog[cert-manager/cert-manager]"
+}

@@ -3,8 +3,6 @@ kind: Gateway
 metadata:
   name: llm-platform-gateway
   namespace: gateway-api
-  annotations:
-    networking.gke.io/certmap: "" #TODO: add cert-manager integration next
 spec:
   gatewayClassName: gke-persistent-regional-external-managed
   addresses:                              

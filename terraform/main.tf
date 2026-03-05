@@ -21,6 +21,7 @@ module "dns" {
 module "networking" {
   source     = "./modules/networking"
   depends_on = [module.enable_apis.prep]
+  project_id = var.project_id
 
   region = var.region
 }

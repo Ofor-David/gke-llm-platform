@@ -76,9 +76,49 @@ resource "google_compute_subnetwork" "bastion_subnet" {
 }
 
 resource "google_compute_address" "gateway_static_ip" {
-  name    = "llm-gateway-ip"
-  region = var.region
-  network_tier = "PREMIUM"  # default
+  name         = "llm-gateway-ip"
+  region       = var.region
+  network_tier = "PREMIUM" # default
 }
 
+
+// Gateway api
+# Allow internet traffic to Gateway load balancer
+resource "google_compute_firewall" "allow_gateway" {
+  name    = "allow-gateway-http-https"
+  network = google_compute_network.vpc.name
+  project = var.project_id
+
+  direction = "INGRESS"
+  priority  = 1000
+
+  allow {
+    protocol = "tcp"
+    ports    = ["80", "443"]
+  }
+
+  # Allow from anywhere on the internet
+  source_ranges = ["0.0.0.0/0"]
+}
+
+# Allow GCP health check ranges — required for load balancer
+resource "google_compute_firewall" "allow_health_checks" {
+  name    = "allow-gcp-health-checks"
+  network = google_compute_network.vpc.name
+  project = var.project_id
+
+  direction = "INGRESS"
+  priority  = 1000
+
+  allow {
+    protocol = "tcp"
+    ports    = ["80", "443", "8080"]
+  }
+
+  # GCP health check IP ranges
+  source_ranges = [
+    "130.211.0.0/22",
+    "35.191.0.0/16"
+  ]
+}
 
