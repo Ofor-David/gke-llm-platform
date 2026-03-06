@@ -4,10 +4,10 @@ metadata:
   name: llm-platform-gateway
   namespace: gateway-api
 spec:
-  gatewayClassName: gke-persistent-regional-external-managed
+  gatewayClassName: gke-l7-global-external-managed
   addresses:                              
-  - type: "gke.networking.io/cidr"
-    value: "34.6.184.119/32"
+  - type: NamedAddress
+    value: llm-platform-gateway-global-ip
   listeners:
     - name: https
       protocol: HTTPS

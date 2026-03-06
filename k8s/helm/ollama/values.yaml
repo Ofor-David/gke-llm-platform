@@ -1,0 +1,35 @@
+image:
+  repository: europe-west4-docker.pkg.dev/seventh-azimuth-488017-b3/container-images/ollama
+  tag: "0.16.3"
+  pullPolicy: IfNotPresent
+
+model:
+  name: qwen2.5-coder:1.5b
+
+resources:
+  requests:
+    memory: "4Gi"
+    cpu: "1"
+  limits:
+    memory: "6Gi"
+    cpu: "2"
+
+metricsExporter:
+  image:
+    repository: europe-west4-docker.pkg.dev/seventh-azimuth-488017-b3/container-images/metrics-exporter
+    tag: "0.1.0"
+  prometheusService: http://kube-prometheus-kube-prome-prometheus.monitoring.svc
+  prometheusPort: 9090
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+scaling:
+  minReplicaCount: 1
+  maxReplicaCount: 2
+  threshold: "3"
+  cooldownPeriod: 300

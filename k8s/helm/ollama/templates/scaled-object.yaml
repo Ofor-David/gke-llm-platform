@@ -1,0 +1,18 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: ollama-scaler
+  namespace: inference
+spec:
+  scaleTargetRef:
+    name: ollama
+  minReplicaCount: {{ .Values.scaling.minReplicaCount }}
+  maxReplicaCount: {{ .Values.scaling.maxReplicaCount }}
+  cooldownPeriod: {{ .Values.scaling.cooldownPeriod }}
+  triggers:
+    - type: prometheus
+      metadata:
+        serverAddress: {{ .Values.metricsExporter.prometheusService }}:{{ .Values.metricsExporter.prometheusPort }}
+        metricName: ollama_queue_depth
+        threshold: {{ .Values.scaling.threshold | quote }}
+        query: sum(ollama_queue_depth)

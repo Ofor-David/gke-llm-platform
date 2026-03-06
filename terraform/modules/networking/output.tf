@@ -14,5 +14,5 @@ output "bastion_subnet" {
 }
 
 output "gateway_static_ip" {
-  value = google_compute_address.gateway_static_ip.address
+  value = google_compute_global_address.gateway_global.address
 }

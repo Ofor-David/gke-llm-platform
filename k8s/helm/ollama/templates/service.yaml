@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ollama
+  namespace: inference
+  annotations:
+spec:
+  selector:
+    app: ollama
+  ports:
+    - name: inference
+      port: 11434
+      targetPort: 11434
+    - name: metrics
+      port: 8080
+      targetPort: 8080 

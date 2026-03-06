@@ -114,3 +114,13 @@ releases:
     wait: true
     labels:
       order: pre
+  
+  - name: ollama
+    namespace: inference
+    chart: ./helm/ollama
+    version: 0.1.0
+    createNamespace: false
+    installed: true
+    wait: true
+    labels:
+      order: post
