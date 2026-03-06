@@ -7,6 +7,8 @@ repositories:
     url: https://helm.linkerd.io/edge
   - name: external-secrets
     url: https://charts.external-secrets.io
+  - name: kedacore 
+    url: https://kedacore.github.io/charts
 
 releases:
 
@@ -18,6 +20,8 @@ releases:
     createNamespace: false
     installed: true
     wait: true
+    labels:
+      order: pre
     values:
       - values/cert-manager.yaml
   
@@ -29,6 +33,8 @@ releases:
     createNamespace: false
     installed: true
     wait: true
+    labels:
+      order: pre
     values:
       - values/trust-manager.yaml
     needs:
@@ -42,6 +48,8 @@ releases:
     createNamespace: false
     installed: true
     wait: true
+    labels:
+      order: post
     values:
       - values/kube-prometheus.yaml
 
@@ -53,6 +61,8 @@ releases:
     createNamespace: false
     installed: true
     wait: true
+    labels:
+      order: pre
     needs: 
       - cert-manager/trust-manager
 
@@ -62,6 +72,10 @@ releases:
     chart: linkerd-edge/linkerd-control-plane
     version: 2026.2.1
     createNamespace: false
+    installed: true
+    wait: true
+    labels:
+      order: post
     values:
       - identity:
           externalCA: true
@@ -88,3 +102,15 @@ releases:
     createNamespace: false
     installed: true
     wait: true
+    labels:
+      order: pre
+
+  - name: keda
+    namespace: keda
+    chart: kedacore/keda
+    version: 2.19.0
+    createNamespace: false
+    installed: true
+    wait: true
+    labels:
+      order: pre
