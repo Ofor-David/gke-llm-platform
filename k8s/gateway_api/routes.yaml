@@ -17,7 +17,7 @@ spec:
       backendRefs:
         - name: ollama
           namespace: inference
-          port: 11434
+          port: 11435
 ---
 # Grafana
 apiVersion: gateway.networking.k8s.io/v1
