@@ -50,10 +50,11 @@ resource "google_container_cluster" "llm_cluster" {
   }
 }
 
-resource "google_logging_project_exclusion" "exclude_gke_non_req" {
+resource "google_logging_project_exclusion" "exclude_gke_non_required" {
   name        = "exclude-containers-and-pods-gke"
   description = "Drop non req GKE-related logs"
 
 
-  filter = "resource.type=k8s_container OR resource.type=k8s_pod"
+  filter = "severity < WARNING"
+
 }
