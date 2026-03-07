@@ -3,15 +3,14 @@ repositories:
     url: https://charts.jetstack.io
   - name: prometheus-community
     url: https://prometheus-community.github.io/helm-charts
-  - name: linkerd-edge 
+  - name: linkerd-edge
     url: https://helm.linkerd.io/edge
   - name: external-secrets
     url: https://charts.external-secrets.io
-  - name: kedacore 
+  - name: kedacore
     url: https://kedacore.github.io/charts
 
 releases:
-
   # Cert-Manager
   - name: cert-manager
     namespace: cert-manager
@@ -24,7 +23,7 @@ releases:
       order: pre
     values:
       - values/cert-manager.yaml
-  
+
   # Trust-Manager
   - name: trust-manager
     namespace: cert-manager
@@ -39,19 +38,6 @@ releases:
       - values/trust-manager.yaml
     needs:
       - cert-manager/cert-manager
-  
-  # Kube-Prometheus Stack
-  - name: kube-prometheus
-    namespace: monitoring
-    chart: prometheus-community/kube-prometheus-stack
-    version: 82.1.0
-    createNamespace: false
-    installed: true
-    wait: true
-    labels:
-      order: post
-    values:
-      - values/kube-prometheus.yaml
 
   # Linkerd CRDs
   - name: linkerd-crds
@@ -63,38 +49,8 @@ releases:
     wait: true
     labels:
       order: pre
-    needs: 
-      - cert-manager/trust-manager
-
-  # Linkerd Control Plane
-  - name: linkerd-control-plane
-    namespace: linkerd
-    chart: linkerd-edge/linkerd-control-plane
-    version: 2026.2.1
-    createNamespace: false
-    installed: true
-    wait: true
-    labels:
-      order: post
-    values:
-      - identity:
-          externalCA: true
-          issuer:
-            scheme: kubernetes.io/tls
     needs:
-      - linkerd/linkerd-crds
       - cert-manager/trust-manager
-
-  # linkerd viz(optional)
-  - name: linkerd-viz
-    namespace: linkerd
-    chart: linkerd-edge/linkerd-viz
-    version: 2026.2.1
-    createNamespace: false
-    installed: true
-    wait: true
-    needs:
-      - linkerd/linkerd-control-plane
 
   # External secrets
   - name: external-secrets
@@ -116,7 +72,42 @@ releases:
     wait: true
     labels:
       order: pre
-  
+
+  #--------------------------------------------------------
+  #-----------------------------------------------------------POST
+  #--------------------------------------------------------
+  # Linkerd Control Plane
+  - name: linkerd-control-plane
+    namespace: linkerd
+    chart: linkerd-edge/linkerd-control-plane
+    version: 2026.2.1
+    createNamespace: false
+    installed: true
+    wait: true
+    labels:
+      order: post
+    values:
+      - identity:
+          externalCA: true
+          issuer:
+            scheme: kubernetes.io/tls
+    needs:
+      - linkerd/linkerd-crds
+      - cert-manager/trust-manager
+
+    # Kube-Prometheus Stack
+  - name: kube-prometheus
+    namespace: monitoring
+    chart: prometheus-community/kube-prometheus-stack
+    version: 82.1.0
+    createNamespace: false
+    installed: true
+    wait: true
+    labels:
+      order: post
+    values:
+      - values/kube-prometheus.yaml
+
   - name: ollama
     namespace: inference
     chart: ./helm/ollama
@@ -126,3 +117,18 @@ releases:
     wait: true
     labels:
       order: post
+    needs:
+      - monitoring/kube-prometheus
+
+  # linkerd viz(optional)
+  - name: linkerd-viz
+    namespace: linkerd
+    chart: linkerd-edge/linkerd-viz
+    version: 2026.2.1
+    createNamespace: false
+    installed: true
+    wait: true
+    labels:
+      order: post
+    needs:
+      - linkerd/linkerd-control-plane
