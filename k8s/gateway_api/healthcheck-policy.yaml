@@ -1,0 +1,18 @@
+apiVersion: networking.gke.io/v1
+kind: HealthCheckPolicy
+metadata:
+  name: grafana-healthcheck
+  namespace: monitoring
+spec:
+  default:
+    checkIntervalSec: 15
+    timeoutSec: 5
+    config:
+      type: HTTP
+      httpHealthCheck:
+        port: 3000
+        requestPath: /api/health
+  targetRef:
+    group: ""
+    kind: Service
+    name: kube-prometheus-grafana

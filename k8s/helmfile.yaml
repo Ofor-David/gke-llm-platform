@@ -86,13 +86,15 @@ releases:
       - cert-manager/trust-manager
 
   # linkerd viz(optional)
-  #- name: linkerd-viz
-  #  namespace: linkerd
-  #  chart: linkerd-edge/linkerd-viz
-  #  version: 2026.2.1
-  #  createNamespace: false
-  #  installed: true
-  #  wait: true
+  - name: linkerd-viz
+    namespace: linkerd
+    chart: linkerd-edge/linkerd-viz
+    version: 2026.2.1
+    createNamespace: false
+    installed: true
+    wait: true
+    needs:
+      - linkerd/linkerd-control-plane
 
   # External secrets
   - name: external-secrets

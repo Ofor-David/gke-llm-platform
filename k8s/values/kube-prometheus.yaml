@@ -1304,14 +1304,13 @@ grafana:
   defaultDashboardsInterval: 1m
 
   # Administrator credentials when not using an existing secret (see below)
-  adminUser: admin
+  #adminUser: admin
   # adminPassword: strongpassword
 
   # Use an existing secret for the admin user.
   admin:
-  #TODO: Update the secret in secret manager
     ## Name of the secret. Can be templated.
-    existingSecret: "grafana-admin-password"
+    existingSecret: grafana-admin-password
     userKey: user
     passwordKey: password
 
