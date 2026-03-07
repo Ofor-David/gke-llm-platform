@@ -10,8 +10,8 @@ spec:
     app: ollama
   ports:
     - name: inference
-      port: 11434
-      targetPort: 11434
+      port: 11435
+      targetPort: 11435
     - name: metrics
       port: 8080
       targetPort: 8080 

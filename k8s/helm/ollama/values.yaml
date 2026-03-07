@@ -17,8 +17,8 @@ resources:
 metricsExporter:
   image:
     repository: europe-west4-docker.pkg.dev/seventh-azimuth-488017-b3/container-images/metrics-exporter
-    tag: "0.1.0"
-  prometheusService: http://kube-prometheus-kube-prome-prometheus.monitoring.svc
+    tag: "0.2.0"
+  prometheusService: http://kube-prometheus-kube-prome-prometheus.monitoring.svc.cluster.local
   prometheusPort: 9090
   resources:
     requests:
