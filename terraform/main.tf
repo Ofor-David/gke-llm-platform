@@ -70,10 +70,3 @@ module "artifact_registry" {
   github_repo   = var.github_repo
   repo_owner_id = var.repo_owner_id
 }
-
-output "gateway_static_ip" {
-  value = module.networking.gateway_static_ip
-}
-output "primary_nameservers" {
-  value = module.dns.name_servers
-}

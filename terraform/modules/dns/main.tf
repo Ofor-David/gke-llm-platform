@@ -5,6 +5,22 @@ resource "google_dns_managed_zone" "primary" {
   description = "LLM Platform DNS zone"
   visibility  = "public"
   project     = var.project_id
+  dnssec_config {
+    state         = "on"
+    non_existence = "nsec3"
+
+    default_key_specs {
+      algorithm  = "rsasha256"
+      key_length = 2048
+      key_type   = "keySigning" # KSK: signs other keys
+    }
+
+    default_key_specs {
+      algorithm  = "rsasha256"
+      key_length = 1024
+      key_type   = "zoneSigning" # ZSK: signs zone records
+    }
+  }
 }
 
 resource "google_dns_record_set" "subdomains" {
