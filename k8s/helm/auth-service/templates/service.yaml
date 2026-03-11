@@ -5,12 +5,10 @@ metadata:
   namespace: auth
   labels:
     app: auth-service
-  annotations:
-    cloud.google.com/neg: '{"exposed_ports": {"8000": {}}}'
 spec:
   selector:
     app: auth-service
   ports:
     - name: http
-      port: 8000
+      port: 80
       targetPort: 8000

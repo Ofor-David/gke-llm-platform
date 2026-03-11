@@ -13,6 +13,7 @@ spec:
       labels:
         app: auth-service
     spec:
+      terminationGracePeriodSeconds: 30
       containers:
         - name: auth-service
           image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
@@ -26,7 +27,7 @@ spec:
             - name: API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.ollamaApiKeySecretRef | quote}}
+                  name: {{ .Values.ollamaApiKeySecretRef }}
                   key: api-key
           readinessProbe:
             httpGet:
@@ -42,3 +43,7 @@ spec:
             periodSeconds: 30
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5"]
