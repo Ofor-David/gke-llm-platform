@@ -1,0 +1,20 @@
+image:
+  repository: europe-west4-docker.pkg.dev/seventh-azimuth-488017-b3/container-images/auth-service
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+ollamaUrl: "http://ollama.inference.svc.cluster.local:11434"
+
+# Ollama API key secret name
+ollamaApiKeySecretRef: "ollama-api-key"
+allowedIPs: ""  # comma separated, empty means all IPs allowed
+
+resources:
+  requests:
+    memory: "128Mi"
+    cpu: "100m"
+  limits:
+    memory: "256Mi"
+    cpu: "200m"
+
+replicaCount: 1
