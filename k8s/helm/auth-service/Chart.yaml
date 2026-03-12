@@ -3,4 +3,4 @@ name: auth-service
 description: API key + IP allowlist auth for LLM platform
 type: application
 version: 0.1.0
-appVersion: "0.1.2"
+appVersion: "0.1.5"

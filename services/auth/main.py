@@ -31,12 +31,9 @@ async def auth_middleware(request: Request, call_next):
     3. IP allowlist check (skipped if ALLOWED_IPS is empty)
     4. API key check
     """
-
-    # 1. Always allow health check through — no auth required
     if request.url.path == "/healthz":
         return await call_next(request)
 
-    # 2. Fail closed if server is misconfigured — never allow through with no key set
     if not API_KEY:
         logger.error("API_KEY environment variable is not configured")
         return JSONResponse(
@@ -44,8 +41,8 @@ async def auth_middleware(request: Request, call_next):
             content={"detail": "Server misconfigured: API_KEY not set"}
         )
 
-    # 3. IP allowlist — only enforced if ALLOWED_IPS is non-empty
     client_ip = get_client_ip(request)
+
     if ALLOWED_IPS and client_ip not in ALLOWED_IPS:
         logger.warning(f"Rejected request from unlisted IP: {client_ip}")
         return JSONResponse(
@@ -53,7 +50,6 @@ async def auth_middleware(request: Request, call_next):
             content={"detail": "IP not allowed"}
         )
 
-    # 4. API key check
     api_key = request.headers.get("X-API-Key", "")
     if not api_key or api_key != API_KEY:
         logger.warning(f"Invalid or missing API key from {client_ip}")
@@ -72,72 +68,97 @@ async def health():
     return {"status": "ok"}
 
 
+async def stream_response(resp: httpx.Response, excluded_headers: set):
+    """
+    Async generator that yields chunks from the upstream response.
+    Wrapped separately so exceptions during streaming are caught and logged
+    rather than crashing the connection silently.
+    """
+    try:
+        async for chunk in resp.aiter_bytes():
+            yield chunk
+    except httpx.RemoteProtocolError as e:
+        logger.error(f"Remote protocol error while streaming: {e}")
+    except httpx.ReadError as e:
+        logger.error(f"Read error while streaming from Ollama: {e}")
+    except Exception as e:
+        logger.error(f"Unexpected error during streaming: {e}")
+
+
 @app.api_route("/{path:path}", methods=["GET", "POST", "DELETE"])
 async def proxy(path: str, request: Request):
     """
     Reverse proxy to Ollama. Streams the response back to the client.
-
     - Strips hop-by-hop headers that should not be forwarded
     - Forwards query params as-is
     - 300s timeout to support long-running Ollama inference requests
     """
     body = await request.body()
 
-    # Strip headers that should not be forwarded to upstream
     excluded_request_headers = {"host", "x-api-key"}
+    excluded_response_headers = {"transfer-encoding", "content-encoding", "content-length"}
+
     headers = {
         k: v for k, v in request.headers.items()
         if k.lower() not in excluded_request_headers
     }
 
+    logger.info(f"Proxying {request.method} /{path} to {OLLAMA_URL}/{path}")
+
     try:
-        async with httpx.AsyncClient(timeout=300) as client:
-            resp = await client.request(
+        async with httpx.AsyncClient(timeout=httpx.Timeout(300, connect=10)) as client:
+            async with client.stream(
                 method=request.method,
                 url=f"{OLLAMA_URL}/{path}",
                 content=body,
                 headers=headers,
                 params=request.query_params
-            )
-    except httpx.ConnectError:
-        logger.error(f"Could not connect to Ollama at {OLLAMA_URL}")
+            ) as resp:
+                logger.info(f"Ollama responded with status {resp.status_code} for /{path}")
+
+                clean_headers = {
+                    k: v for k, v in resp.headers.items()
+                    if k.lower() not in excluded_response_headers
+                }
+
+                # If Ollama itself returned an error, read and log the body
+                # then return it as-is rather than streaming an empty/broken response
+                if resp.status_code >= 400:
+                    error_body = await resp.aread()
+                    logger.error(f"Ollama returned {resp.status_code} for /{path}: {error_body.decode()}")
+                    return JSONResponse(
+                        status_code=resp.status_code,
+                        content={"detail": f"Upstream error: {error_body.decode()}"}
+                    )
+
+                return StreamingResponse(
+                    content=stream_response(resp, excluded_response_headers),
+                    status_code=resp.status_code,
+                    headers=clean_headers,
+                    media_type=resp.headers.get("content-type")
+                )
+
+    except httpx.ConnectError as e:
+        logger.error(f"Could not connect to Ollama at {OLLAMA_URL}: {e}")
         return JSONResponse(
             status_code=502,
             content={"detail": "Could not connect to upstream Ollama service"}
         )
-    except httpx.TimeoutException:
-        logger.error(f"Request to Ollama timed out: {path}")
+    except httpx.TimeoutException as e:
+        logger.error(f"Request to Ollama timed out for /{path}: {e}")
         return JSONResponse(
             status_code=504,
             content={"detail": "Upstream Ollama service timed out"}
         )
     except httpx.RequestError as e:
-        logger.error(f"Unexpected error proxying to Ollama: {e}")
+        logger.error(f"Unexpected request error proxying to Ollama: {e}")
         return JSONResponse(
             status_code=500,
             content={"detail": "Unexpected error contacting upstream service"}
         )
-
-    # Strip hop-by-hop headers that must not be forwarded in a streaming response
-    excluded_response_headers = {"transfer-encoding", "content-encoding", "content-length"}
-    clean_headers = {
-        k: v for k, v in resp.headers.items()
-        if k.lower() not in excluded_response_headers
-    }
-
-    return StreamingResponse(
-        content=resp.aiter_bytes(),
-        status_code=resp.status_code,
-        headers=clean_headers,
-        media_type=resp.headers.get("content-type")
-    )
-
-
-# TODO: multiple keys with per-key identity and rate limiting
-# {
-#   "keys": {
-#     "key-abc123": {"identity": "team-backend", "tier": "standard"},
-#     "key-xyz789": {"identity": "ci-pipeline", "tier": "standard"},
-#     "key-adm000": {"identity": "admin", "tier": "unlimited"}
-#   }
-# }
+    except Exception as e:
+        logger.error(f"Unhandled exception in proxy for /{path}: {e}", exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error"}
+        )
