@@ -1,17 +1,22 @@
-from prometheus_client import start_http_server, Counter, Histogram, Gauge
-import requests
+from fastapi import FastAPI, Request
+from fastapi.responses import StreamingResponse, JSONResponse
+from prometheus_client import Counter, Histogram, Gauge, make_asgi_app
+import httpx
 import json
-import threading
+import asyncio
 import time
 import os
-from http.server import HTTPServer, BaseHTTPRequestHandler
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 INSTANCE_COST_PER_HOUR = float(os.getenv("INSTANCE_COST_PER_HOUR", "0.031"))
 METRICS_PORT = int(os.getenv("METRICS_PORT", "8080"))
 PROXY_PORT = int(os.getenv("PROXY_PORT", "11435"))
 
-# Metrics
+# --- Metrics ---
 requests_total = Counter(
     'ollama_requests_total',
     'Total requests to Ollama',
@@ -47,101 +52,210 @@ cost_per_hour = Gauge(
     'Estimated cost per hour'
 )
 
+# --- App ---
+app = FastAPI()
 active_requests = 0
-active_requests_lock = threading.Lock()
+active_requests_lock = asyncio.Lock()
 
-class ProxyHandler(BaseHTTPRequestHandler):
-    def do_POST(self):
-        global active_requests
-        content_length = int(self.headers.get('Content-Length', 0))
-        body = self.rfile.read(content_length)
 
-        with active_requests_lock:
-            active_requests += 1
-            queue_depth.set(active_requests)
+async def stream_and_record_metrics(resp: httpx.Response, model_hint: str, endpoint: str, start: float):
+    """
+    Streams response chunks to the client while collecting the full body
+    in the background to extract Ollama metrics after completion.
+    
+    - Yields chunks immediately as they arrive (true streaming)
+    - After stream ends, parses the final JSON chunk for token counts
+    - Records duration, token counts, and request totals to Prometheus
+    """
+    full_body = b""
+    try:
+        async for chunk in resp.aiter_bytes():
+            full_body += chunk
+            yield chunk
+    except httpx.RemoteProtocolError as e:
+        logger.error(f"Remote protocol error while streaming: {e}")
+    except httpx.ReadError as e:
+        logger.error(f"Read error while streaming from Ollama: {e}")
+    except Exception as e:
+        logger.error(f"Unexpected error during streaming: {e}")
+    finally:
+        duration = time.time() - start
 
-        start = time.time()
+        # Parse metrics from response body
+        # For streaming responses, Ollama sends one JSON object per line.
+        # The last line contains the final stats (eval_count, prompt_eval_count etc.)
         try:
-            resp = requests.post(
-                f"{OLLAMA_URL}{self.path}",
-                data=body,
-                headers=dict(self.headers),
-                stream=True,
-                timeout=300
-            )
+            # Try parsing as single JSON first (stream=false)
+            data = json.loads(full_body)
+            model = data.get("model", model_hint)
+            endpoint_label = endpoint.split("/")[-1]
 
-            self.send_response(resp.status_code)
-            for k, v in resp.headers.items():
-                self.send_header(k, v)
-            self.end_headers()
+            requests_total.labels(model=model, endpoint=endpoint_label).inc()
+            request_duration.labels(model=model, endpoint=endpoint_label).observe(duration)
 
-            # Collect full response to extract metrics
-            full_body = b""
-            for chunk in resp.iter_content(chunk_size=None):
-                self.wfile.write(chunk)
-                full_body += chunk
+            if "prompt_eval_count" in data:
+                prompt_tokens.labels(model=model).inc(data["prompt_eval_count"])
+            if "eval_count" in data:
+                generated_tokens.labels(model=model).inc(data["eval_count"])
 
-            duration = time.time() - start
+            logger.info(f"Completed /{endpoint_label} model={model} duration={duration:.2f}s")
 
-            # Parse metrics from response
+        except json.JSONDecodeError:
+            # Streaming response — parse line by line, last line has the stats
             try:
-                data = json.loads(full_body)
-                model = data.get("model", "unknown")
-                endpoint = self.path.split("/")[-1]
+                lines = full_body.decode().strip().split("\n")
+                last_line = json.loads(lines[-1])
+                model = last_line.get("model", model_hint)
+                endpoint_label = endpoint.split("/")[-1]
 
-                requests_total.labels(model=model, endpoint=endpoint).inc()
-                request_duration.labels(model=model, endpoint=endpoint).observe(duration)
+                requests_total.labels(model=model, endpoint=endpoint_label).inc()
+                request_duration.labels(model=model, endpoint=endpoint_label).observe(duration)
 
-                if "prompt_eval_count" in data:
-                    prompt_tokens.labels(model=model).inc(data["prompt_eval_count"])
-                if "eval_count" in data:
-                    generated_tokens.labels(model=model).inc(data["eval_count"])
+                if "prompt_eval_count" in last_line:
+                    prompt_tokens.labels(model=model).inc(last_line["prompt_eval_count"])
+                if "eval_count" in last_line:
+                    generated_tokens.labels(model=model).inc(last_line["eval_count"])
 
-            except Exception:
-                pass
+                logger.info(f"Completed /{endpoint_label} model={model} duration={duration:.2f}s")
+
+            except Exception as e:
+                logger.warning(f"Could not parse metrics from response: {e}")
 
         except Exception as e:
-            self.send_response(502)
-            self.end_headers()
-            self.wfile.write(str(e).encode())
-        finally:
-            with active_requests_lock:
-                active_requests -= 1
-                queue_depth.set(active_requests)
+            logger.warning(f"Could not parse metrics from response: {e}")
 
-    def do_GET(self):
-        resp = requests.get(f"{OLLAMA_URL}{self.path}", timeout=10)
-        self.send_response(resp.status_code)
-        self.end_headers()
-        self.wfile.write(resp.content)
 
-    def log_message(self, format, *args):
-        pass  # suppress default HTTP logs
+@app.middleware("http")
+async def track_queue_depth(request: Request, call_next):
+    """Track active in-flight requests for KEDA autoscaling."""
+    global active_requests
+    async with active_requests_lock:
+        active_requests += 1
+        queue_depth.set(active_requests)
+    try:
+        return await call_next(request)
+    finally:
+        async with active_requests_lock:
+            active_requests -= 1
+            queue_depth.set(active_requests)
 
-def poll_model_status():
-    while True:
-        try:
-            resp = requests.get(f"{OLLAMA_URL}/api/ps", timeout=5)
-            models = resp.json().get("models", [])
-            if models:
-                for m in models:
-                    model_loaded.labels(model=m["name"]).set(1)
-                cost_per_hour.set(INSTANCE_COST_PER_HOUR)
-            else:
-                model_loaded.labels(model="none").set(0)
-                cost_per_hour.set(0)
-        except Exception:
-            pass
-        time.sleep(15)
 
-if __name__ == "__main__":
-    # Start Prometheus metrics server
-    start_http_server(METRICS_PORT)
-    print(f"Metrics server on :{METRICS_PORT}")
+@app.get("/healthz")
+async def health():
+    return {"status": "ok"}
 
-    # Start model status poller
-    threading.Thread(target=poll_model_status, daemon=True).start()
 
-    # Start proxy server
-    print(f"Proxy server on :{PROXY_PORT}")
-    HTTPServer(("0.0.0.0", PROXY_PORT), ProxyHandler).serve_forever()
+@app.api_route("/{path:path}", methods=["GET", "POST", "DELETE"])
+async def proxy(path: str, request: Request):
+    """
+    Async reverse proxy to Ollama with metrics collection.
+    Uses httpx streaming so chunks flow to the client immediately
+    rather than buffering the full response.
+    """
+    body = await request.body()
+    start = time.time()
+
+    excluded_request_headers = {"host"}
+    excluded_response_headers = {"transfer-encoding", "content-encoding", "content-length"}
+
+    headers = {
+        k: v for k, v in request.headers.items()
+        if k.lower() not in excluded_request_headers
+    }
+
+    # Extract model name from request body for metrics labelling
+    model_hint = "unknown"
+    try:
+        model_hint = json.loads(body).get("model", "unknown")
+    except Exception:
+        pass
+
+    logger.info(f"Proxying {request.method} /{path} model={model_hint}")
+
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(300, connect=10)) as client:
+            async with client.stream(
+                method=request.method,
+                url=f"{OLLAMA_URL}/{path}",
+                content=body,
+                headers=headers,
+                params=request.query_params
+            ) as resp:
+                logger.info(f"Ollama responded with status {resp.status_code} for /{path}")
+
+                if resp.status_code >= 400:
+                    error_body = await resp.aread()
+                    logger.error(f"Ollama returned {resp.status_code} for /{path}: {error_body.decode()}")
+                    return JSONResponse(
+                        status_code=resp.status_code,
+                        content={"detail": f"Upstream error: {error_body.decode()}"}
+                    )
+
+                clean_headers = {
+                    k: v for k, v in resp.headers.items()
+                    if k.lower() not in excluded_response_headers
+                }
+
+                return StreamingResponse(
+                    content=stream_and_record_metrics(resp, model_hint, path, start),
+                    status_code=resp.status_code,
+                    headers=clean_headers,
+                    media_type=resp.headers.get("content-type")
+                )
+
+    except httpx.ConnectError as e:
+        logger.error(f"Could not connect to Ollama at {OLLAMA_URL}: {e}")
+        return JSONResponse(
+            status_code=502,
+            content={"detail": "Could not connect to upstream Ollama service"}
+        )
+    except httpx.TimeoutException as e:
+        logger.error(f"Request to Ollama timed out for /{path}: {e}")
+        return JSONResponse(
+            status_code=504,
+            content={"detail": "Upstream Ollama service timed out"}
+        )
+    except httpx.RequestError as e:
+        logger.error(f"Unexpected request error proxying to Ollama: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Unexpected error contacting upstream service"}
+        )
+    except Exception as e:
+        logger.error(f"Unhandled exception in proxy for /{path}: {e}", exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error"}
+        )
+
+
+async def poll_model_status():
+    """
+    Background task that polls Ollama every 15s to check which models
+    are loaded in memory and updates cost/model gauges accordingly.
+    """
+    async with httpx.AsyncClient(timeout=5) as client:
+        while True:
+            try:
+                resp = await client.get(f"{OLLAMA_URL}/api/ps")
+                models = resp.json().get("models", [])
+                if models:
+                    for m in models:
+                        model_loaded.labels(model=m["name"]).set(1)
+                    cost_per_hour.set(INSTANCE_COST_PER_HOUR)
+                else:
+                    model_loaded.labels(model="none").set(0)
+                    cost_per_hour.set(0)
+            except Exception as e:
+                logger.warning(f"Could not poll Ollama model status: {e}")
+            await asyncio.sleep(15)
+
+
+@app.on_event("startup")
+async def startup():
+    asyncio.create_task(poll_model_status())
+
+
+# Mount Prometheus metrics endpoint on /metrics
+metrics_app = make_asgi_app()
+app.mount("/metrics", metrics_app)
