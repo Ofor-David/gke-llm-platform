@@ -56,6 +56,7 @@ cost_per_hour = Gauge(
 app = FastAPI()
 active_requests = 0
 active_requests_lock = asyncio.Lock()
+client: httpx.AsyncClient | None = None
 
 
 async def stream_and_record_metrics(resp: httpx.Response, model_hint: str, endpoint: str, start: float):
@@ -80,6 +81,7 @@ async def stream_and_record_metrics(resp: httpx.Response, model_hint: str, endpo
         logger.error(f"Unexpected error during streaming: {e}")
     finally:
         duration = time.time() - start
+        await resp.asclose()
 
         # Parse metrics from response body
         # For streaming responses, Ollama sends one JSON object per line.
@@ -144,13 +146,13 @@ async def track_queue_depth(request: Request, call_next):
 async def health():
     return {"status": "ok"}
 
-
 @app.api_route("/{path:path}", methods=["GET", "POST", "DELETE"])
 async def proxy(path: str, request: Request):
     """
     Async reverse proxy to Ollama with metrics collection.
-    Uses httpx streaming so chunks flow to the client immediately
-    rather than buffering the full response.
+    Uses client.send(stream=True) to keep the connection open for the
+    full duration of the StreamingResponse — fixes the 'stream closed'
+    error caused by async with context manager exiting on return.
     """
     body = await request.body()
     start = time.time()
@@ -163,7 +165,6 @@ async def proxy(path: str, request: Request):
         if k.lower() not in excluded_request_headers
     }
 
-    # Extract model name from request body for metrics labelling
     model_hint = "unknown"
     try:
         model_hint = json.loads(body).get("model", "unknown")
@@ -172,62 +173,105 @@ async def proxy(path: str, request: Request):
 
     logger.info(f"Proxying {request.method} /{path} model={model_hint}")
 
+    # Build and send the request with stream=True
+    # This returns response headers immediately without reading the body,
+    # so we can check status and set it on StreamingResponse correctly
     try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(300, connect=10)) as client:
-            async with client.stream(
-                method=request.method,
-                url=f"{OLLAMA_URL}/{path}",
-                content=body,
-                headers=headers,
-                params=request.query_params
-            ) as resp:
-                logger.info(f"Ollama responded with status {resp.status_code} for /{path}")
-
-                if resp.status_code >= 400:
-                    error_body = await resp.aread()
-                    logger.error(f"Ollama returned {resp.status_code} for /{path}: {error_body.decode()}")
-                    return JSONResponse(
-                        status_code=resp.status_code,
-                        content={"detail": f"Upstream error: {error_body.decode()}"}
-                    )
-
-                clean_headers = {
-                    k: v for k, v in resp.headers.items()
-                    if k.lower() not in excluded_response_headers
-                }
-
-                return StreamingResponse(
-                    content=stream_and_record_metrics(resp, model_hint, path, start),
-                    status_code=resp.status_code,
-                    headers=clean_headers,
-                    media_type=resp.headers.get("content-type")
-                )
-
+        req = client.build_request(
+            method=request.method,
+            url=f"{OLLAMA_URL}/{path}",
+            content=body,
+            headers=headers,
+            params=request.query_params
+        )
+        resp = await client.send(req, stream=True)
     except httpx.ConnectError as e:
         logger.error(f"Could not connect to Ollama at {OLLAMA_URL}: {e}")
-        return JSONResponse(
-            status_code=502,
-            content={"detail": "Could not connect to upstream Ollama service"}
-        )
+        return JSONResponse(status_code=502, content={"detail": "Could not connect to upstream Ollama service"})
     except httpx.TimeoutException as e:
         logger.error(f"Request to Ollama timed out for /{path}: {e}")
-        return JSONResponse(
-            status_code=504,
-            content={"detail": "Upstream Ollama service timed out"}
-        )
+        return JSONResponse(status_code=504, content={"detail": "Upstream Ollama service timed out"})
     except httpx.RequestError as e:
         logger.error(f"Unexpected request error proxying to Ollama: {e}")
-        return JSONResponse(
-            status_code=500,
-            content={"detail": "Unexpected error contacting upstream service"}
-        )
+        return JSONResponse(status_code=500, content={"detail": "Unexpected error contacting upstream service"})
     except Exception as e:
         logger.error(f"Unhandled exception in proxy for /{path}: {e}", exc_info=True)
+        return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+
+    logger.info(f"Ollama responded with status {resp.status_code} for /{path}")
+
+    # Handle upstream errors before streaming
+    if resp.status_code >= 400:
+        error_body = await resp.aread()
+        await resp.aclose()
+        logger.error(f"Ollama returned {resp.status_code} for /{path}: {error_body.decode()}")
         return JSONResponse(
-            status_code=500,
-            content={"detail": "Internal server error"}
+            status_code=resp.status_code,
+            content={"detail": f"Upstream error: {error_body.decode()}"}
         )
 
+    clean_headers = {
+        k: v for k, v in resp.headers.items()
+        if k.lower() not in excluded_response_headers
+    }
+
+    async def stream_and_close():
+        """
+        Generator that streams chunks and closes the response when done.
+        Defined inside proxy so it closes over resp — keeping the connection
+        alive until the generator is fully consumed by StreamingResponse.
+        """
+        full_body = b""
+        try:
+            async for chunk in resp.aiter_bytes():
+                full_body += chunk
+                yield chunk
+        except httpx.RemoteProtocolError as e:
+            logger.error(f"Remote protocol error while streaming: {e}")
+        except httpx.ReadError as e:
+            logger.error(f"Read error while streaming from Ollama: {e}")
+        except Exception as e:
+            logger.error(f"Unexpected error during streaming: {e}", exc_info=True)
+        finally:
+            # Always close the response connection
+            await resp.aclose()
+
+            # Record metrics after stream completes
+            duration = time.time() - start
+            endpoint_label = path.split("/")[-1]
+            try:
+                data = json.loads(full_body)
+                model = data.get("model", model_hint)
+                requests_total.labels(model=model, endpoint=endpoint_label).inc()
+                request_duration.labels(model=model, endpoint=endpoint_label).observe(duration)
+                if "prompt_eval_count" in data:
+                    prompt_tokens.labels(model=model).inc(data["prompt_eval_count"])
+                if "eval_count" in data:
+                    generated_tokens.labels(model=model).inc(data["eval_count"])
+                logger.info(f"Completed /{endpoint_label} model={model} duration={duration:.2f}s")
+            except json.JSONDecodeError:
+                try:
+                    lines = full_body.decode().strip().split("\n")
+                    last_line = json.loads(lines[-1])
+                    model = last_line.get("model", model_hint)
+                    requests_total.labels(model=model, endpoint=endpoint_label).inc()
+                    request_duration.labels(model=model, endpoint=endpoint_label).observe(duration)
+                    if "prompt_eval_count" in last_line:
+                        prompt_tokens.labels(model=model).inc(last_line["prompt_eval_count"])
+                    if "eval_count" in last_line:
+                        generated_tokens.labels(model=model).inc(last_line["eval_count"])
+                    logger.info(f"Completed /{endpoint_label} model={model} duration={duration:.2f}s")
+                except Exception as e:
+                    logger.warning(f"Could not parse metrics from response: {e}")
+            except Exception as e:
+                logger.warning(f"Could not parse metrics from response: {e}")
+
+    return StreamingResponse(
+        content=stream_and_close(),
+        status_code=resp.status_code,
+        headers=clean_headers,
+        media_type=resp.headers.get("content-type")
+    )
 
 async def poll_model_status():
     """
@@ -253,7 +297,16 @@ async def poll_model_status():
 
 @app.on_event("startup")
 async def startup():
+    global client
+    client = httpx.AsyncClient(timeout=httpx.Timeout(300, connect=10))
     asyncio.create_task(poll_model_status())
+
+
+@app.on_event("shutdown")
+async def shutdown():
+    global client
+    if client:
+        await client.aclose()
 
 
 # Mount Prometheus metrics endpoint on /metrics

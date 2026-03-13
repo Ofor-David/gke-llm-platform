@@ -8,6 +8,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
+client: httpx.AsyncClient | None = None
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama.inference.svc.cluster.local:11435")
 API_KEY = os.getenv("API_KEY", "")
@@ -68,6 +69,19 @@ async def health():
     return {"status": "ok"}
 
 
+@app.on_event("startup")
+async def startup():
+    global client
+    client = httpx.AsyncClient(timeout=httpx.Timeout(300, connect=10))
+
+
+@app.on_event("shutdown")
+async def shutdown():
+    global client
+    if client:
+        await client.aclose()
+
+
 async def stream_response(resp: httpx.Response, excluded_headers: set):
     """
     Async generator that yields chunks from the upstream response.
@@ -106,37 +120,36 @@ async def proxy(path: str, request: Request):
     logger.info(f"Proxying {request.method} /{path} to {OLLAMA_URL}/{path}")
 
     try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(300, connect=10)) as client:
-            async with client.stream(
-                method=request.method,
-                url=f"{OLLAMA_URL}/{path}",
-                content=body,
-                headers=headers,
-                params=request.query_params
-            ) as resp:
-                logger.info(f"Ollama responded with status {resp.status_code} for /{path}")
+        async with client.stream(
+            method=request.method,
+            url=f"{OLLAMA_URL}/{path}",
+            content=body,
+            headers=headers,
+            params=request.query_params
+        ) as resp:
+            logger.info(f"Ollama responded with status {resp.status_code} for /{path}")
 
-                clean_headers = {
-                    k: v for k, v in resp.headers.items()
-                    if k.lower() not in excluded_response_headers
-                }
+            clean_headers = {
+                k: v for k, v in resp.headers.items()
+                if k.lower() not in excluded_response_headers
+            }
 
-                # If Ollama itself returned an error, read and log the body
-                # then return it as-is rather than streaming an empty/broken response
-                if resp.status_code >= 400:
-                    error_body = await resp.aread()
-                    logger.error(f"Ollama returned {resp.status_code} for /{path}: {error_body.decode()}")
-                    return JSONResponse(
-                        status_code=resp.status_code,
-                        content={"detail": f"Upstream error: {error_body.decode()}"}
-                    )
-
-                return StreamingResponse(
-                    content=stream_response(resp, excluded_response_headers),
+            # If Ollama itself returned an error, read and log the body
+            # then return it as-is rather than streaming an empty/broken response
+            if resp.status_code >= 400:
+                error_body = await resp.aread()
+                logger.error(f"Ollama returned {resp.status_code} for /{path}: {error_body.decode()}")
+                return JSONResponse(
                     status_code=resp.status_code,
-                    headers=clean_headers,
-                    media_type=resp.headers.get("content-type")
+                    content={"detail": f"Upstream error: {error_body.decode()}"}
                 )
+
+            return StreamingResponse(
+                content=stream_response(resp, excluded_response_headers),
+                status_code=resp.status_code,
+                headers=clean_headers,
+                media_type=resp.headers.get("content-type")
+            )
 
     except httpx.ConnectError as e:
         logger.error(f"Could not connect to Ollama at {OLLAMA_URL}: {e}")
