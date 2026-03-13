@@ -13,6 +13,11 @@ OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama.inference.svc.cluster.local:
 API_KEY = os.getenv("API_KEY", "")
 ALLOWED_IPS = set(filter(None, os.getenv("ALLOWED_IPS", "").split(",")))
 
+# Singleton httpx client — created on startup, shared across all requests.
+# Must not be recreated per-request as that causes the context manager to
+# close the connection before StreamingResponse finishes reading.
+client: httpx.AsyncClient | None = None
+
 
 def get_client_ip(request: Request) -> str:
     """Extract real client IP, accounting for GCP load balancer X-Forwarded-For header."""
@@ -20,6 +25,19 @@ def get_client_ip(request: Request) -> str:
     if forwarded:
         return forwarded.split(",")[0].strip()
     return request.client.host
+
+
+@app.on_event("startup")
+async def startup():
+    global client
+    client = httpx.AsyncClient(timeout=httpx.Timeout(300, connect=10))
+
+
+@app.on_event("shutdown")
+async def shutdown():
+    global client
+    if client:
+        await client.aclose()
 
 
 @app.middleware("http")
@@ -30,6 +48,9 @@ async def auth_middleware(request: Request, call_next):
     2. Fail closed if API_KEY is not configured
     3. IP allowlist check (skipped if ALLOWED_IPS is empty)
     4. API key check
+
+    Note: Returns JSONResponse directly instead of raising HTTPException —
+    exceptions raised in middleware bypass FastAPI's exception handlers and return 500.
     """
     if request.url.path == "/healthz":
         return await call_next(request)
@@ -68,11 +89,11 @@ async def health():
     return {"status": "ok"}
 
 
-async def stream_response(resp: httpx.Response, excluded_headers: set):
+async def stream_response(resp: httpx.Response):
     """
     Async generator that yields chunks from the upstream response.
-    Wrapped separately so exceptions during streaming are caught and logged
-    rather than crashing the connection silently.
+    Closes the response in the finally block so the connection is always
+    cleaned up after the stream is fully consumed or on error.
     """
     try:
         async for chunk in resp.aiter_bytes():
@@ -82,16 +103,21 @@ async def stream_response(resp: httpx.Response, excluded_headers: set):
     except httpx.ReadError as e:
         logger.error(f"Read error while streaming from Ollama: {e}")
     except Exception as e:
-        logger.error(f"Unexpected error during streaming: {e}")
+        logger.error(f"Unexpected error during streaming: {e}", exc_info=True)
+    finally:
+        # Always close the response connection once the stream ends or errors
+        await resp.aclose()
 
 
 @app.api_route("/{path:path}", methods=["GET", "POST", "DELETE"])
 async def proxy(path: str, request: Request):
     """
     Reverse proxy to Ollama. Streams the response back to the client.
-    - Strips hop-by-hop headers that should not be forwarded
-    - Forwards query params as-is
-    - 300s timeout to support long-running Ollama inference requests
+
+    Uses client.send(stream=True) instead of async with client.stream() —
+    the context manager pattern closes the httpx connection on return, before
+    StreamingResponse has consumed the body. client.send() keeps the connection
+    open until resp.aclose() is explicitly called in the stream generator.
     """
     body = await request.body()
 
@@ -106,38 +132,14 @@ async def proxy(path: str, request: Request):
     logger.info(f"Proxying {request.method} /{path} to {OLLAMA_URL}/{path}")
 
     try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(300, connect=10)) as client:
-            async with client.stream(
-                method=request.method,
-                url=f"{OLLAMA_URL}/{path}",
-                content=body,
-                headers=headers,
-                params=request.query_params
-            ) as resp:
-                logger.info(f"Ollama responded with status {resp.status_code} for /{path}")
-
-                clean_headers = {
-                    k: v for k, v in resp.headers.items()
-                    if k.lower() not in excluded_response_headers
-                }
-
-                # If Ollama itself returned an error, read and log the body
-                # then return it as-is rather than streaming an empty/broken response
-                if resp.status_code >= 400:
-                    error_body = await resp.aread()
-                    logger.error(f"Ollama returned {resp.status_code} for /{path}: {error_body.decode()}")
-                    return JSONResponse(
-                        status_code=resp.status_code,
-                        content={"detail": f"Upstream error: {error_body.decode()}"}
-                    )
-
-                return StreamingResponse(
-                    content=stream_response(resp, excluded_response_headers),
-                    status_code=resp.status_code,
-                    headers=clean_headers,
-                    media_type=resp.headers.get("content-type")
-                )
-
+        req = client.build_request(
+            method=request.method,
+            url=f"{OLLAMA_URL}/{path}",
+            content=body,
+            headers=headers,
+            params=request.query_params
+        )
+        resp = await client.send(req, stream=True)
     except httpx.ConnectError as e:
         logger.error(f"Could not connect to Ollama at {OLLAMA_URL}: {e}")
         return JSONResponse(
@@ -162,3 +164,38 @@ async def proxy(path: str, request: Request):
             status_code=500,
             content={"detail": "Internal server error"}
         )
+
+    logger.info(f"Ollama responded with status {resp.status_code} for /{path}")
+
+    # Handle upstream errors before streaming — read and close the response
+    # cleanly rather than trying to stream an error body
+    if resp.status_code >= 400:
+        error_body = await resp.aread()
+        await resp.aclose()
+        logger.error(f"Ollama returned {resp.status_code} for /{path}: {error_body.decode()}")
+        return JSONResponse(
+            status_code=resp.status_code,
+            content={"detail": f"Upstream error: {error_body.decode()}"}
+        )
+
+    clean_headers = {
+        k: v for k, v in resp.headers.items()
+        if k.lower() not in excluded_response_headers
+    }
+
+    return StreamingResponse(
+        content=stream_response(resp),
+        status_code=resp.status_code,
+        headers=clean_headers,
+        media_type=resp.headers.get("content-type")
+    )
+
+
+# TODO: multiple keys with per-key identity and rate limiting
+# {
+#   "keys": {
+#     "key-abc123": {"identity": "team-backend", "tier": "standard"},
+#     "key-xyz789": {"identity": "ci-pipeline", "tier": "standard"},
+#     "key-adm000": {"identity": "admin", "tier": "unlimited"}
+#   }
+# }
