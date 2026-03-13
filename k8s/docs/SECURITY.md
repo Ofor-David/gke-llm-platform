@@ -39,7 +39,17 @@ kubectl get issuers -A
 
 Secrets are managed via External Secrets Operator in `cert-manager` namespace.
 
-Configuration: `secrets/secret-store.yaml`
+# Create Required gcloud secrets
+```
+echo -n '{"api-key": "api-key-value"}' | gcloud secrets create ollama-api-key \
+    --data-file=- \
+    --project=<project-id>
+```
+```
+echo -n '{"userKey": "user", "passwordKey": "password"}' | gcloud secrets create grafana-admin-password \
+    --data-file=- \   
+    --project=<project-id>
+```
 
 ### Application Secrets
 
