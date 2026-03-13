@@ -1,6 +1,6 @@
 image:
   repository: europe-west4-docker.pkg.dev/seventh-azimuth-488017-b3/container-images/auth-service
-  tag: "0.1.5"
+  tag: "0.2.2"
   pullPolicy: IfNotPresent
 
 ollamaUrl: "http://ollama.inference.svc.cluster.local:11435"
