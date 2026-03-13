@@ -6,6 +6,5 @@ resources:
   - linkerd-identity-issuer.yaml
   - linkerd-identity-issuer-certificate.yaml
   - trust-bundle.yaml
-  - webhook-certificates.yaml
   - llm-platform-certificate.yaml
   - llm-platform-clusterIssuer.yaml

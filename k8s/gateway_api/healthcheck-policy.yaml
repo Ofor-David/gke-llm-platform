@@ -16,3 +16,22 @@ spec:
     group: ""
     kind: Service
     name: kube-prometheus-grafana
+---
+apiVersion: networking.gke.io/v1
+kind: HealthCheckPolicy
+metadata:
+  name: auth-service-healthcheck
+  namespace: auth
+spec:
+  default:
+    checkIntervalSec: 15
+    timeoutSec: 5
+    config:
+      type: HTTP
+      httpHealthCheck:
+        port: 8000
+        requestPath: /healthz
+  targetRef:
+    group: ""
+    kind: Service
+    name: auth-service

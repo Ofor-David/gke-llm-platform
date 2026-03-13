@@ -1,0 +1,12 @@
+apiVersion: networking.gke.io/v1
+kind: GCPBackendPolicy
+metadata:
+  name: auth-service-backend-policy
+  namespace: auth
+spec:
+  default:
+    timeoutSec: 300
+  targetRef:
+    group: ""
+    kind: Service
+    name: auth-service

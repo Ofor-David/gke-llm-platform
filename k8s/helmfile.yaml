@@ -108,6 +108,21 @@ releases:
     values:
       - values/kube-prometheus.yaml
 
+    # Auth service
+  - name: auth-service
+    namespace: auth
+    chart: ./helm/auth-service
+    version: 0.1.0
+    createNamespace: false
+    installed: true
+    wait: true
+    labels:
+      order: post
+    needs:
+      - monitoring/kube-prometheus
+      - linkerd/linkerd-control-plane
+      
+    # inference Server
   - name: ollama
     namespace: inference
     chart: ./helm/ollama
@@ -118,7 +133,8 @@ releases:
     labels:
       order: post
     needs:
-      - monitoring/kube-prometheus
+      - auth/auth-service
+      - linkerd/linkerd-control-plane
 
   # linkerd viz(optional)
   - name: linkerd-viz
