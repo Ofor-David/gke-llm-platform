@@ -89,47 +89,61 @@ Eight independent layers: each assumes the ones above may be compromised:
 
 - **ArgoCD**: Watches Git repo, auto-syncs cluster to desired state, provides rollbacks and audit trail
 - **GitHub Actions**: 
-  - Builds auth-service and metrics-exporter images on every commit
-  - Trivy scans: fails on CRITICAL/HIGH CVEs
+  - Builds auth-service, rate-limiter, and metrics-exporter images on push to main
+  - Trivy vulnerability scanning: **not yet implemented** (planned)
   - Pushes to GCP Artifact Registry
   - Uses Workload Identity Federation for GCP auth (no service account keys in secrets)
   - Updates image tags in Helm values, commits back to trigger ArgoCD sync
+
+### Required GitHub Repository Secrets
+
+Configure these secrets in your GitHub repository settings (`Settings → Secrets and variables → Actions`):
+
+| Secret | Description |
+|--------|-------------|
+| `PROJECT_ID` | GCP project ID |
+| `REGION` | GCP region (e.g., `europe-west4`) |
+| `WI_PROVIDER_NAME` | Workload Identity provider name |
+| `SERVICE_ACCOUNT` | GCP service account email for workload identity |
 
 ## Directory Structure
 
 ```
 llm-platform/
-├── terraform/          # GCP infrastructure as code (VPC, GKE, DNS, Artifact Registry)
-│   └── README.md       # Terraform deployment guide
-├── k8s/                # Kubernetes manifests and Helm charts
-│   ├── helm/           # Auth service and Ollama Helm charts
-│   ├── values/         # Helm values for releases
-│   ├── certs/         # cert-manager certificate resources
-│   ├── docs/          # Architecture, security, troubleshooting docs
-│   └── README.md      # Kubernetes deployment guide
-└── services/           # Application source code
-    ├── auth/           # FastAPI authentication service
-    └── metrics-exporter/  # Prometheus metrics sidecar
+├── .github/workflows/      # GitHub Actions CI/CD pipelines
+├── terraform/              # GCP infrastructure as code (VPC, GKE, DNS, Artifact Registry)
+│   └── README.md          # Terraform deployment guide
+├── k8s/                   # Kubernetes manifests and Helm charts
+│   ├── helm/              # Auth service, rate-limiter, and Ollama Helm charts
+│   ├── values/            # Helm values for releases
+│   ├── certs/            # cert-manager certificate resources
+│   ├── docs/             # Architecture, security, troubleshooting docs
+│   └── README.md         # Kubernetes deployment guide
+└── services/              # Application source code
+    ├── auth/              # FastAPI authentication service
+    ├── rate-limiter/     # FastAPI + Redis sliding window rate limiter
+    └── metrics-exporter/ # Prometheus metrics sidecar
 ```
 
 ## What's Implemented
 
 - Terraform modules for VPC, GKE, node pools, Cloud DNS, Artifact Registry, IAM, bastion
-- Kubernetes namespaces, Helm charts for auth-service and Ollama
+- Kubernetes namespaces, Helm charts for auth-service, rate-limiter, and Ollama
 - Linkerd service mesh, cert-manager with Let's Encrypt
 - External Secrets Operator with GCP Secret Manager and Workload Identity
 - KEDA autoscaling based on queue depth
 - kube-prometheus-stack deployment
 - Rate Limiter Service: FastAPI + Redis sliding window, 10 req/min per key, 429 with Retry-After
+- GitHub Actions CI/CD pipeline for building and pushing container images
 
 ## What's Next
 
 These features are documented but not yet implemented:
 
 1. **ArgoCD Deployment**: GitOps sync from this repo, sync waves for ordered deployment
-3. **GitHub Actions Pipeline**: build, scan, push, trigger ArgoCD
-4. **Grafana Dashboards**: cluster overview, inference metrics, LLM-specific with cost visibility
-5. **Network Policies**: default-deny in inference namespace, explicit allow rules
+2. **Trivy Vulnerability Scanning**: Add container image scanning to CI pipeline
+3. **Grafana Dashboards**: cluster overview, inference metrics, LLM-specific with cost visibility
+4. **Network Policies**: default-deny in inference namespace, explicit allow rules
 
 ## Deployment
 
