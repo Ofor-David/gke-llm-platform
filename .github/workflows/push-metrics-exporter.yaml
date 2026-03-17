@@ -1,0 +1,40 @@
+name: Build & Push metrics-exporter
+on:
+  push:
+    branches:
+      - main
+    paths: ['services/metrics-exporter/**']
+env:
+  REPOSITORY: "container-images"
+  IMAGE: auth-service
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WI_PROVIDER_NAME}}
+          service_account: ${{ secrets.SERVICE_ACCOUNT}}
+
+      - name: Configure Docker
+        run: gcloud auth configure-docker ${{ secrets.REGION }}-docker.pkg.dev --quiet
+
+      - name: Build
+        run: |
+          docker build \
+            -t ${{ secrets.REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.REPOSITORY }}/${{ secrets.IMAGE }}:${{ github.sha }} ./services/metrics-exporter
+          docker tag ${{ secrets.REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.REPOSITORY }}/${{ secrets.IMAGE }}:${{ github.sha }} \
+            ${{ secrets.REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.REPOSITORY }}/${{ secrets.IMAGE }}:latest
+
+      - name: Push
+        run: |
+          docker push ${{ secrets.REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.REPOSITORY }}/${{ secrets.IMAGE }}:${{ github.sha }}
+          docker push ${{ secrets.REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.REPOSITORY }}/${{ secrets.IMAGE }}:latest
