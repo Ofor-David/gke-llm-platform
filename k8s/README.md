@@ -6,6 +6,7 @@ This directory contains the Kubernetes manifests and Helm charts for deploying t
 
 The platform consists of:
 - **auth-service**: Authentication service handling API key validation
+- **rate-limiter**: FastAPI + Redis sliding window rate limiter (10 req/min per API key)
 - **ollama**: LLM inference server with autoscaling support
 
 ## Prerequisites
@@ -65,6 +66,7 @@ k8s/
 ├── gateway_api/             # Gateway API resources
 ├── helm/
 │   ├── auth-service/        # Auth service Helm chart
+│   ├── rate-limiter/       # Rate limiter Helm chart (sliding window)
 │   └── ollama/              # Ollama Helm chart
 ├── secrets/                 # External secrets configuration
 ├── values/                  # Helm values for releases

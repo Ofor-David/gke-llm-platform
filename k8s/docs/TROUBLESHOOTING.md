@@ -101,6 +101,52 @@ kubectl exec -it <pod-name> -n <namespace> -- curl http://<service>.<namespace>.
 kubectl port-forward -n <namespace> svc/<service> <local-port>:<service-port>
 ```
 
+## Rate Limiter Issues
+
+### Check Rate Limiter Pods
+
+```bash
+kubectl get pods -n ratelimit
+kubectl describe pod -n ratelimit -l app=rate-limiter
+```
+
+### View Rate Limiter Logs
+
+```bash
+kubectl logs -n ratelimit -l app=rate-limiter
+kubectl logs -n ratelimit <pod-name> -f
+```
+
+### Check Redis Connectivity
+
+```bash
+# From rate-limiter pod
+kubectl exec -it <rate-limiter-pod> -n ratelimit -- redis-cli -h <redis-host> ping
+
+# Check Redis pods
+kubectl get pods -n ratelimit -l app=redis
+```
+
+### Common Issues
+
+#### Receiving 429 Errors Unexpectedly
+
+1. Check if multiple services are sharing the same API key
+2. Verify the client's system time is accurate (NTP sync)
+3. Review application logs for request patterns
+
+#### Rate Limiter Not Applying Limits
+
+1. Verify rate-limiter service is running: `kubectl get pods -n ratelimit`
+2. Check if auth-service has correct `RATE_LIMITER_URL` env var
+3. Review rate-limiter logs for errors
+
+#### Redis Connection Failures
+
+1. Check Redis pod status: `kubectl get pods -n ratelimit -l app=redis`
+2. Verify Redis credentials in secrets
+3. Check network policies allow traffic between namespaces
+
 
 ## Common Issues
 

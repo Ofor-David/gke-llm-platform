@@ -120,13 +120,13 @@ llm-platform/
 - External Secrets Operator with GCP Secret Manager and Workload Identity
 - KEDA autoscaling based on queue depth
 - kube-prometheus-stack deployment
+- Rate Limiter Service: FastAPI + Redis sliding window, 10 req/min per key, 429 with Retry-After
 
 ## What's Next
 
 These features are documented but not yet implemented:
 
-1. **Rate Limiter Service**: FastAPI + Redis sliding window, 10 req/min per key, 429 with Retry-After
-2. **ArgoCD Deployment**: GitOps sync from this repo, sync waves for ordered deployment
+1. **ArgoCD Deployment**: GitOps sync from this repo, sync waves for ordered deployment
 3. **GitHub Actions Pipeline**: build, scan, push, trigger ArgoCD
 4. **Grafana Dashboards**: cluster overview, inference metrics, LLM-specific with cost visibility
 5. **Network Policies**: default-deny in inference namespace, explicit allow rules

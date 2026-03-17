@@ -67,6 +67,35 @@ All service-to-service traffic is encrypted via Linkerd.
 linkerd check --proxy
 ```
 
+## Rate Limiting
+
+### Sliding Window Rate Limiter
+
+The platform implements a **sliding window** rate limiter using Redis to prevent cost abuse and protect against runaway scripts or compromised API keys.
+
+| Property | Value |
+|----------|-------|
+| Limit | 10 requests/minute per API key |
+| Algorithm | Sliding window |
+| Storage | Redis |
+| Namespace | `ratelimit` |
+
+### Why Sliding Window?
+
+The sliding window algorithm provides superior protection compared to fixed-window approaches:
+
+- **Prevents burst abuse**: Unlike fixed windows that reset every minute, sliding windows track request timing continuously—preventing clients from sending 10 requests at :59 and another 10 at :00
+- **Fair resource allocation**: Each API key has isolated limits, so one misbehaving client cannot exhaust resources for others
+- **Cost control**: At 10 req/min, even a stolen API key is limited to ~6,000 requests/hour, minimizing potential charges
+
+### Rate Limiter Response
+
+When a client exceeds the limit, the rate limiter returns:
+- **HTTP 429** (Too Many Requests)
+- `Retry-After` header indicating seconds to wait
+
+This allows clients to implement automatic backoff without manual intervention.
+
 ## GATEWAY API
 
 Gateway API resources in `gateway_api/` define ingress rules:

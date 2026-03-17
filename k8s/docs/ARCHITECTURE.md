@@ -18,13 +18,23 @@
                 ▼                               ▼
 ┌───────────────────────────┐   ┌───────────────────────────────┐
 │      auth-service         │   │         ollama                │
-│    (auth namespace)       │   │     (inference namespace)     │
+│    (auth namespace)       │   │     (inference namespace)    │
 │                           │   │                               │
 │  - API key validation     │   │  - LLM inference              │
 │  - IP allowlisting        │   │  - KEDA autoscaling           │
 │  - Ollama proxy           │   │  - Metrics exporter           │
 └───────────────────────────┘   │  - PVC for models             │
-                                └───────────────────────────────┘
+                │               └───────────────────────────────┘
+                ▼
+┌───────────────────────────┐
+│      rate-limiter          │
+│    (ratelimit namespace)   │
+│                           │
+│  - Sliding window Redis    │
+│  - 10 req/min per key     │
+│  - Returns 429 + Retry-   │
+│    After on limit         │
+└───────────────────────────┘
 ```
 
 ## Namespaces
@@ -37,6 +47,7 @@
 | `gateway-api` | Ingress configuration |
 | `monitoring` | Prometheus, Grafana, Alertmanager |
 | `auth` | Authentication service |
+| `ratelimit` | Rate limiter (sliding window Redis) |
 | `inference` | Ollama LLM inference |
 
 ## Networking
@@ -50,8 +61,20 @@
 
 1. Client request → Gateway API → Linkerd ingress
 2. Linkerd routes to auth-service (authentication)
-3. Authenticated requests forwarded to ollama for inference
-4. Response returned through Linkerd mesh
+3. Authenticated requests forwarded to rate-limiter (sliding window check)
+4. If within limit, request proceeds to ollama for inference
+5. Response returned through Linkerd mesh
+
+## Why Sliding Window Rate Limiting?
+
+The rate limiter uses a **sliding window** algorithm with Redis, which offers significant advantages over fixed window approaches:
+
+- **Smooth rate distribution**: Requests are spread evenly across the time window, preventing the "burst at window boundaries" problem where fixed windows allow double the rate at midnight
+- **Per-API-key isolation**: Each client gets their own rate limit bucket, preventing one abusive client from affecting others
+- **Cost protection**: With 10 req/min per key, a compromised API key can only generate ~600 requests/hour—limiting potential abuse
+- **Simple yet effective**: Sliding window provides good accuracy without the complexity of token bucket or leaky bucket algorithms
+
+This is a smart architectural choice because it protects the platform from runaway scripts, accidental DDoS from misconfigured clients, and credential abuse—while being lightweight enough to run on minimal infrastructure.
 
 ## Storage
 
