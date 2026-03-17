@@ -121,6 +121,20 @@ releases:
     needs:
       - monitoring/kube-prometheus
       - linkerd/linkerd-control-plane
+  
+    # Rate limiter
+  - name: rate-limiter
+    namespace: ratelimit
+    chart: ./helm/rate-limiter
+    version: 0.1.0
+    createNamespace: false
+    installed: true
+    wait: true
+    labels:
+      order: post
+    needs:
+      - auth/auth-service
+      - linkerd/linkerd-control-plane
       
     # inference Server
   - name: ollama
@@ -133,7 +147,7 @@ releases:
     labels:
       order: post
     needs:
-      - auth/auth-service
+      - ratelimit/rate-limiter
       - linkerd/linkerd-control-plane
 
   # linkerd viz(optional)

@@ -3,7 +3,7 @@ image:
   tag: "0.2.2"
   pullPolicy: IfNotPresent
 
-ollamaUrl: "http://ollama.inference.svc.cluster.local:11435"
+ollamaUrl: "http://rate-limiter.ratelimit.svc.cluster.local:8001"
 
 # Ollama API key secret name
 ollamaApiKeySecretRef: "ollama-api-key"

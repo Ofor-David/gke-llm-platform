@@ -38,3 +38,10 @@ metadata:
   name:  auth
   annotations: 
     linkerd.io/inject: enabled
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name:  ratelimit
+  annotations: 
+    linkerd.io/inject: enabled
