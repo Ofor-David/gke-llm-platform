@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse, JSONResponse
 from prometheus_client import Counter, Histogram, Gauge, make_asgi_app
@@ -53,10 +55,22 @@ cost_per_hour = Gauge(
 )
 
 # --- App ---
-app = FastAPI()
 active_requests = 0
 active_requests_lock = asyncio.Lock()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # everything before yield runs on startup
+    global client
+    client = httpx.AsyncClient(timeout=httpx.Timeout(300, connect=10))
+    asyncio.create_task(poll_model_status())
+    
+    yield  # app is running here
+    
+    # everything after yield runs on shutdown
+    if client:
+        await client.aclose()
 client: httpx.AsyncClient | None = None
+app = FastAPI(lifespan=lifespan)
 
 
 async def stream_and_record_metrics(resp: httpx.Response, model_hint: str, endpoint: str, start: float):
@@ -293,21 +307,6 @@ async def poll_model_status():
             except Exception as e:
                 logger.warning(f"Could not poll Ollama model status: {e}")
             await asyncio.sleep(15)
-
-
-@app.on_event("startup")
-async def startup():
-    global client
-    client = httpx.AsyncClient(timeout=httpx.Timeout(300, connect=10))
-    asyncio.create_task(poll_model_status())
-
-
-@app.on_event("shutdown")
-async def shutdown():
-    global client
-    if client:
-        await client.aclose()
-
 
 # Mount Prometheus metrics endpoint on /metrics
 metrics_app = make_asgi_app()

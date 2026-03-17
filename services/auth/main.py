@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse, JSONResponse
 import httpx
@@ -7,12 +9,26 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI()
-client: httpx.AsyncClient | None = None
 
-OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama.inference.svc.cluster.local:11435")
+RATE_LIMITER_URL = os.getenv("RATE_LIMITER_URL", "http://rate-limiter.ratelimit.svc.cluster.local:8001")
 API_KEY = os.getenv("API_KEY", "")
 ALLOWED_IPS = set(filter(None, os.getenv("ALLOWED_IPS", "").split(",")))
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # everything before yield runs on startup
+    global client
+    client = httpx.AsyncClient(timeout=httpx.Timeout(300, connect=10))
+    
+    yield  # app is running here
+    
+    # everything after yield runs on shutdown
+    if client:
+        await client.aclose()
+
+client: httpx.AsyncClient | None = None
+app = FastAPI(lifespan=lifespan)
+
 
 # Singleton httpx client — created on startup, shared across all requests.
 # Must not be recreated per-request as that causes the context manager to
@@ -26,19 +42,6 @@ def get_client_ip(request: Request) -> str:
     if forwarded:
         return forwarded.split(",")[0].strip()
     return request.client.host
-
-
-@app.on_event("startup")
-async def startup():
-    global client
-    client = httpx.AsyncClient(timeout=httpx.Timeout(300, connect=10))
-
-
-@app.on_event("shutdown")
-async def shutdown():
-    global client
-    if client:
-        await client.aclose()
 
 
 @app.middleware("http")
@@ -130,19 +133,19 @@ async def proxy(path: str, request: Request):
         if k.lower() not in excluded_request_headers
     }
 
-    logger.info(f"Proxying {request.method} /{path} to {OLLAMA_URL}/{path}")
+    logger.info(f"Proxying {request.method} /{path} to {RATE_LIMITER_URL}/{path}")
 
     try:
         req = client.build_request(
             method=request.method,
-            url=f"{OLLAMA_URL}/{path}",
+            url=f"{RATE_LIMITER_URL}/{path}",
             content=body,
             headers=headers,
             params=request.query_params
         )
         resp = await client.send(req, stream=True)
     except httpx.ConnectError as e:
-        logger.error(f"Could not connect to Ollama at {OLLAMA_URL}: {e}")
+        logger.error(f"Could not connect to Ollama at {RATE_LIMITER_URL}: {e}")
         return JSONResponse(
             status_code=502,
             content={"detail": "Could not connect to upstream Ollama service"}
