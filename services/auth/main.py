@@ -122,7 +122,7 @@ async def proxy(path: str, request: Request):
     """
     body = await request.body()
 
-    excluded_request_headers = {"host", "x-api-key"}
+    excluded_request_headers = {"host"}
     excluded_response_headers = {"transfer-encoding", "content-encoding", "content-length"}
 
     headers = {
