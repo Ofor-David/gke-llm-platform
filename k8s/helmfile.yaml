@@ -111,7 +111,7 @@ releases:
     # Auth service
   - name: auth-service
     namespace: auth
-    chart: ./helm/auth-service
+    chart: ./charts/auth-service
     version: 0.1.0
     createNamespace: false
     installed: true
@@ -125,7 +125,7 @@ releases:
     # Rate limiter
   - name: rate-limiter
     namespace: ratelimit
-    chart: ./helm/rate-limiter
+    chart: ./charts/rate-limiter
     version: 0.1.0
     createNamespace: false
     installed: true
@@ -139,7 +139,7 @@ releases:
     # inference Server
   - name: ollama
     namespace: inference
-    chart: ./helm/ollama
+    chart: ./charts/ollama
     version: 0.1.0
     createNamespace: false
     installed: true
