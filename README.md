@@ -114,11 +114,11 @@ llm-platform/
 ├── terraform/              # GCP infrastructure as code (VPC, GKE, DNS, Artifact Registry)
 │   └── README.md          # Terraform deployment guide
 ├── k8s/                   # Kubernetes manifests and Helm charts
-│   ├── helm/              # Auth service, rate-limiter, and Ollama Helm charts
-│   ├── values/            # Helm values for releases
-│   ├── certs/            # cert-manager certificate resources
-│   ├── docs/             # Architecture, security, troubleshooting docs
-│   └── README.md         # Kubernetes deployment guide
+│   ├── charts/             # Auth service, rate-limiter, and Ollama Helm charts
+│   ├── values/             # Helm values for releases
+│   ├── platform/           # Platform components (cert-manager, gateway-api, secrets)
+│   ├── docs/               # Architecture, security, troubleshooting docs
+│   └── README.md           # Kubernetes deployment guide
 └── services/              # Application source code
     ├── auth/              # FastAPI authentication service
     ├── rate-limiter/     # FastAPI + Redis sliding window rate limiter

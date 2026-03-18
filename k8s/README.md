@@ -62,15 +62,15 @@ k8s/
 ├── namespaces.yaml          # Namespace definitions
 ├── helmfile.yaml            # Helm releases configuration
 ├── docs/                    # Documentation for components
-├── certs/                   # TLS certificates (cert-manager)
-├── gateway_api/             # Gateway API resources
-├── helm/
+├── platform/                # Platform components
+│   ├── cert-manager/        # cert-manager certificate resources
+│   ├── gateway-api/         # Gateway API resources
+│   └── secrets/             # External secrets configuration
+├── charts/                  # Helm charts
 │   ├── auth-service/        # Auth service Helm chart
-│   ├── rate-limiter/       # Rate limiter Helm chart (sliding window)
+│   ├── rate-limiter/        # Rate limiter Helm chart (sliding window)
 │   └── ollama/              # Ollama Helm chart
-├── secrets/                 # External secrets configuration
-├── values/                  # Helm values for releases
-└── scripts/                 # Utility scripts
+└── values/                  # Helm values for releases
 ```
 
 ## Deployment Order
