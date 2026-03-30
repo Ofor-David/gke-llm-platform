@@ -67,7 +67,7 @@ resource "google_compute_router_nat" "nat" {
 }
 
 
-// Bastion subnet
+// Bastion subnet 
 resource "google_compute_subnetwork" "bastion_subnet" {
   name          = "bastion-subnet"
   region        = var.region
