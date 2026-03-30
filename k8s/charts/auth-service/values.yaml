@@ -1,6 +1,6 @@
 image:
   repository: europe-west4-docker.pkg.dev/seventh-azimuth-488017-b3/container-images/auth-service
-  tag: "694a52ff87dc5d2cd5d94719295fcfb0c3a7d13e"
+  tag: "d33e6358b6fac3ba0280136a346708027315222b"
   pullPolicy: IfNotPresent
 
 ratelimiterUrl: "http://rate-limiter.ratelimit.svc.cluster.local:8001"
