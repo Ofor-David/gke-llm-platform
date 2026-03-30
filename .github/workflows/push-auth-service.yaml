@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - main
-    paths: ['services/auth/**']
+    paths: ['services/auth/**', ./github/workflows/push-auth-service.yaml]
 env:
   REPOSITORY: "container-images"
   IMAGE: auth-service

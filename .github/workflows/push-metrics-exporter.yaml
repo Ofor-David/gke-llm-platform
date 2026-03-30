@@ -3,10 +3,10 @@ on:
   push:
     branches:
       - main
-    paths: ['services/metrics-exporter/**']
+    paths: ['services/metrics-exporter/**', ./github/workflows/push-metrics-exporter.yaml]
 env:
   REPOSITORY: "container-images"
-  IMAGE: auth-service
+  IMAGE: metrics-exporter
 
 jobs:
   build-push:

@@ -3,10 +3,10 @@ on:
   push:
     branches:
       - main
-    paths: ['services/rate-limiter/**']
+    paths: ['services/rate-limiter/**', ./github/workflows/push-rate-limiter.yaml]
 env:
   REPOSITORY: "container-images"
-  IMAGE: auth-service
+  IMAGE: rate-limiter
 
 jobs:
   build-push:
