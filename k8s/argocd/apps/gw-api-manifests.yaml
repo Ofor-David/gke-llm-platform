@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: https://github.com/Ofor-David/gke-llm-platform.git
     targetRevision: main
-    path: k8s/platform/gateway_api
+    path: k8s/platform/gateway-api
   destination:
     server: https://kubernetes.default.svc
     namespace: gateway-api
