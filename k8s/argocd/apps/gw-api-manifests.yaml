@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gateway-api-manifests
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Ofor-David/gke-llm-platform.git
+    targetRevision: main
+    path: k8s/gateway_api
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: gateway-api
+  syncPolicy:
+    automated:
+      prune: true
+    syncOptions:
+      - CreateNamespace=false
