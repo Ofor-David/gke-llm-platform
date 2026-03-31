@@ -35,6 +35,15 @@
 │  - Returns 429 + Retry-   │
 │    After on limit         │
 └───────────────────────────┘
+
+┌───────────────────────────┐
+│        ArgoCD             │
+│    (argocd namespace)     │
+│                           │
+│  - GitOps deployment      │
+│  - Application sync       │
+│  - UI dashboard           │
+└───────────────────────────┘
 ```
 
 ## Namespaces
@@ -46,6 +55,7 @@
 | `keda` | Event-driven autoscaling |
 | `gateway-api` | Ingress configuration |
 | `monitoring` | Prometheus, Grafana, Alertmanager |
+| `argocd` | GitOps continuous delivery |
 | `auth` | Authentication service |
 | `ratelimit` | Rate limiter (sliding window Redis) |
 | `inference` | Ollama LLM inference |
@@ -64,6 +74,13 @@
 3. Authenticated requests forwarded to rate-limiter (sliding window check)
 4. If within limit, request proceeds to ollama for inference
 5. Response returned through Linkerd mesh
+
+## Network Policies
+
+Network policies in `platform/network-policies/` control pod-to-pod communication:
+- `inference-network-policy.yaml`: Controls traffic to ollama
+- `auth-network-policy.yaml`: Controls traffic to auth-service
+- `ratelimit-network-policy.yaml`: Controls traffic to rate-limiter
 
 ## Why Sliding Window Rate Limiting?
 

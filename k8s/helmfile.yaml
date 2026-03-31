@@ -9,8 +9,23 @@ repositories:
     url: https://charts.external-secrets.io
   - name: kedacore
     url: https://kedacore.github.io/charts
+  - name: argo
+    url: https://argoproj.github.io/argo-helm
 
 releases:
+  # Argocd
+  - name: argocd
+    namespace: argocd
+    chart: argo/argo-cd
+    version: 9.4.17
+    createNamespace: false
+    installed: true
+    wait: true
+    values:
+      - values/argocd.yaml
+    labels:
+      order: pre
+
   # Cert-Manager
   - name: cert-manager
     namespace: cert-manager

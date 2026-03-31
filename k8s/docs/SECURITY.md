@@ -39,6 +39,10 @@ kubectl get issuers -A
 
 Secrets are managed via External Secrets Operator in `cert-manager` namespace.
 
+Configuration files in `platform/secrets/`:
+- `secret-store.yaml`: SecretStore provider configuration
+- `external-secrets.yaml`: ExternalSecret resources
+
 # Create Required gcloud secrets
 ```
 echo -n '{"api-key": "api-key-value"}' | gcloud secrets create ollama-api-key \
@@ -115,3 +119,25 @@ Gateway API resources in `gateway_api/` define ingress rules:
 - Use specific image tags (not `latest`)
 - Images stored in GCP Artifact Registry
 - Pull policy: `IfNotPresent`
+
+## ArgoCD Security
+
+ArgoCD is deployed in the `argocd` namespace for GitOps-based deployments.
+
+### Accessing ArgoCD UI
+
+```bash
+kubectl port-forward -n argocd svc/argocd-server 8080:443
+```
+
+Default username: `admin`. Password can be retrieved via:
+```bash
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+```
+
+### ArgoCD Security Best Practices
+
+- Change default admin password after first login
+- Use SSO integration for production deployments
+- Enable RBAC policies
+- Review [ArgoCD security documentation](https://argo-cd.readthedocs.io/en/stable/operator-manual/security/)

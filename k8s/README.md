@@ -8,6 +8,7 @@ The platform consists of:
 - **auth-service**: Authentication service handling API key validation
 - **rate-limiter**: FastAPI + Redis sliding window rate limiter (10 req/min per API key)
 - **ollama**: LLM inference server with autoscaling support
+- **argocd**: GitOps continuous delivery
 
 ## Prerequisites
 
@@ -65,6 +66,7 @@ k8s/
 ├── platform/                # Platform components
 │   ├── cert-manager/        # cert-manager certificate resources
 │   ├── gateway-api/         # Gateway API resources
+│   ├── network-policies/    # Network policies for pod communication
 │   └── secrets/             # External secrets configuration
 ├── charts/                  # Helm charts
 │   ├── auth-service/        # Auth service Helm chart
@@ -75,8 +77,8 @@ k8s/
 
 ## Deployment Order
 
-1. **Pre-install**: cert-manager, trust-manager, external-secrets, keda
-2. **Post-install**: linkerd-control-plane, linkerd-viz, kube-prometheus, auth-service, ollama
+1. **Pre-install**: argocd, cert-manager, trust-manager, external-secrets, keda, linkerd-crds
+2. **Post-install**: linkerd-control-plane, linkerd-viz, kube-prometheus, auth-service, rate-limiter, ollama
 
 ## Monitoring
 

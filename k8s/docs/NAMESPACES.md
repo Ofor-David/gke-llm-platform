@@ -11,6 +11,7 @@ This document describes the namespaces used in the LLM Platform.
 | `keda` | Event-driven autoscaling | - |
 | `gateway-api` | Gateway API CRDs and routes | - |
 | `monitoring` | Prometheus, Grafana, Alertmanager | - |
+| `argocd` | GitOps continuous delivery | - |
 | `ratelimit` | Sliding window rate limiter with Redis | `linkerd.io/inject: enabled` |
 | `inference` | Ollama LLM inference service | `linkerd.io/inject: enabled` |
 | `auth` | Authentication service | `linkerd.io/inject: enabled` |

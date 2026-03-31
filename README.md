@@ -90,7 +90,7 @@ Eight independent layers: each assumes the ones above may be compromised:
 - **ArgoCD**: Watches Git repo, auto-syncs cluster to desired state, provides rollbacks and audit trail
 - **GitHub Actions**: 
   - Builds auth-service, rate-limiter, and metrics-exporter images on push to main
-  - Trivy vulnerability scanning: **not yet implemented** (planned)
+  - Trivy vulnerability scanning in CI pipeline
   - Pushes to GCP Artifact Registry
   - Uses Workload Identity Federation for GCP auth (no service account keys in secrets)
   - Updates image tags in Helm values, commits back to trigger ArgoCD sync
@@ -116,7 +116,7 @@ llm-platform/
 ├── k8s/                   # Kubernetes manifests and Helm charts
 │   ├── charts/             # Auth service, rate-limiter, and Ollama Helm charts
 │   ├── values/             # Helm values for releases
-│   ├── platform/           # Platform components (cert-manager, gateway-api, secrets)
+│   ├── platform/           # Platform components (cert-manager, gateway-api, secrets, network-policies)
 │   ├── docs/               # Architecture, security, troubleshooting docs
 │   └── README.md           # Kubernetes deployment guide
 └── services/              # Application source code
@@ -135,6 +135,7 @@ llm-platform/
 - kube-prometheus-stack deployment
 - Rate Limiter Service: FastAPI + Redis sliding window, 10 req/min per key, 429 with Retry-After
 - GitHub Actions CI/CD pipeline for building and pushing container images
+- Network policies for pod communication control
 
 ## What's Next
 
@@ -143,7 +144,6 @@ These features are documented but not yet implemented:
 1. **ArgoCD Deployment**: GitOps sync from this repo, sync waves for ordered deployment
 2. **Trivy Vulnerability Scanning**: Add container image scanning to CI pipeline
 3. **Grafana Dashboards**: cluster overview, inference metrics, LLM-specific with cost visibility
-4. **Network Policies**: default-deny in inference namespace, explicit allow rules
 
 ## Deployment
 
