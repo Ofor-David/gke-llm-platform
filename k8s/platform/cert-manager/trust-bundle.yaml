@@ -7,9 +7,6 @@ spec:
     - secret:
         name: "linkerd-trust-anchor"
         key: "tls.crt"
-    - secret:
-        name: "linkerd-previous-anchor"
-        key: "tls.crt"
   target:
     configMap:
       key: "ca-bundle.crt"

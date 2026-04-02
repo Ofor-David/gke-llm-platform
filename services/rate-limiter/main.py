@@ -33,7 +33,6 @@ app = FastAPI(lifespan=lifespan)
 
 def get_client_identity(request: Request) -> str:
     # Use API key directly as the rate limit identity
-    # TODO: When multi-key is implemented this switches to X-Client-Identity header
     api_key = request.headers.get("X-API-Key", "anonymous")
     # Hash it so the raw key isn't stored in Redis
     return hashlib.sha256(api_key.encode()).hexdigest()[:16]

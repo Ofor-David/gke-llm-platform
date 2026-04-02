@@ -136,14 +136,12 @@ llm-platform/
 - Rate Limiter Service: FastAPI + Redis sliding window, 10 req/min per key, 429 with Retry-After
 - GitHub Actions CI/CD pipeline for building and pushing container images
 - Network policies for pod communication control
-
+- ArgoCD Deployment, GitOps sync from this repo, sync waves for ordered deployment
 ## What's Next
 
 These features are documented but not yet implemented:
 
-1. **ArgoCD Deployment**: GitOps sync from this repo, sync waves for ordered deployment
-2. **Trivy Vulnerability Scanning**: Add container image scanning to CI pipeline
-3. **Grafana Dashboards**: cluster overview, inference metrics, LLM-specific with cost visibility
+1. **Grafana Dashboards**: cluster overview, inference metrics, LLM-specific with cost visibility
 
 ## Deployment
 
