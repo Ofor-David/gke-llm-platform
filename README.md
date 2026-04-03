@@ -54,7 +54,6 @@ Eight independent layers: each assumes the ones above may be compromised:
 5. **Rate limiting**: 10 req/min per key prevents cost abuse from compromised keys or runaway scripts
 6. **Service mesh mTLS**: Linkerd auto-injects sidecars at namespace level, all pod-to-pod traffic encrypted and mutually authenticated
 7. **Network policies**: inference namespace defaults to deny, explicit allow for rate-limiter → metrics-exporter and Prometheus → metrics-exporter
-8. **Image scanning**: Trivy fails builds on CRITICAL/HIGH CVEs, Artifact Registry scans continuously
 
 ## Autoscaling
 
@@ -65,35 +64,27 @@ Eight independent layers: each assumes the ones above may be compromised:
 
 ## Observability
 
-- **kube-prometheus-stack**: Prometheus, Grafana, Alertmanager, node-exporter, kube-state-metrics
+- **kube-prometheus-stack**: Prometheus, Grafana, Alertmanager, node-exporter, kube-state-metrics (v82.1.0)
 - **Metrics exporter sidecar**: Intercepts every Ollama request/response, extracts:
   - Token counts (prompt, completion, total)
   - Durations (prompt eval, generation)
   - Queue depth for KEDA scaling
   - Cost per hour (instance price × pod count via recording rules)
-- **Three custom Grafana dashboards**:
-  - Cluster Overview: node CPU, memory, pod health
-  - Inference Metrics: request rate, p50/p95/p99 latency, error rate, queue depth
-  - LLM-Specific: tokens/sec, prompt eval time, generation time, model load status, running cost
 
-## Cost Efficiency
+## What's Implemented
 
-- **Spot instances**: 60-91% discount vs on-demand ($0.016/hr vs $0.067/hr for e2-standard-2)
-- **Scale to zero**: KEDA scales pods to zero during off-hours: platform used mostly 9am-6pm weekday
-- **CPU inference**: Qwen2.5-coder 1.5B fits on e2-standard-2: no GPU needed ($0.45-2.48/hr for GPU instances)
-- **Shared system pool**: All platform services share one node pool, not dedicated pools per service
-- **Cost visibility**: Prometheus recording rules compute real-time cost/hour: data to justify spend to leadership
-
-
-## GitOps & CI/CD
-
-- **ArgoCD**: Watches Git repo, auto-syncs cluster to desired state, provides rollbacks and audit trail
-- **GitHub Actions**: 
-  - Builds auth-service, rate-limiter, and metrics-exporter images on push to main
-  - Trivy vulnerability scanning in CI pipeline
-  - Pushes to GCP Artifact Registry
-  - Uses Workload Identity Federation for GCP auth (no service account keys in secrets)
-  - Updates image tags in Helm values, commits back to trigger ArgoCD sync
+- Terraform modules for VPC, GKE, node pools, Cloud DNS, Artifact Registry, IAM, bastion
+- Kubernetes namespaces, Helm charts for auth-service, rate-limiter, metrics-exporter, and Ollama
+- Linkerd service mesh (2026.2.1 edge), Linkerd viz for debugging
+- cert-manager with Let's Encrypt
+- External Secrets Operator with GCP Secret Manager and Workload Identity
+- KEDA autoscaling based on queue depth
+- kube-prometheus-stack deployment (Prometheus, Grafana, Alertmanager)
+- Rate Limiter Service: FastAPI + Redis sliding window, 10 req/min per key, 429 with Retry-After
+- Metrics Exporter: Prometheus metrics sidecar for Ollama (tokens, latency, queue depth, cost)
+- GitHub Actions CI/CD pipeline for building and pushing container images (auth-service, rate-limiter, metrics-exporter)
+- Network policies for pod communication control
+- ArgoCD Deployment with 14 GitOps applications, sync waves for ordered deployment
 
 ### Required GitHub Repository Secrets
 
@@ -114,29 +105,17 @@ llm-platform/
 ├── terraform/              # GCP infrastructure as code (VPC, GKE, DNS, Artifact Registry)
 │   └── README.md          # Terraform deployment guide
 ├── k8s/                   # Kubernetes manifests and Helm charts
-│   ├── charts/             # Auth service, rate-limiter, and Ollama Helm charts
+│   ├── charts/             # Auth service, rate-limiter, metrics-exporter, and Ollama Helm charts
 │   ├── values/             # Helm values for releases
 │   ├── platform/           # Platform components (cert-manager, gateway-api, secrets, network-policies)
-│   ├── docs/               # Architecture, security, troubleshooting docs
-│   └── README.md           # Kubernetes deployment guide
+│   ├── argocd/             # ArgoCD applications for GitOps deployment
+│   └── docs/               # Architecture, security, troubleshooting docs
 └── services/              # Application source code
     ├── auth/              # FastAPI authentication service
     ├── rate-limiter/     # FastAPI + Redis sliding window rate limiter
     └── metrics-exporter/ # Prometheus metrics sidecar
 ```
 
-## What's Implemented
-
-- Terraform modules for VPC, GKE, node pools, Cloud DNS, Artifact Registry, IAM, bastion
-- Kubernetes namespaces, Helm charts for auth-service, rate-limiter, and Ollama
-- Linkerd service mesh, cert-manager with Let's Encrypt
-- External Secrets Operator with GCP Secret Manager and Workload Identity
-- KEDA autoscaling based on queue depth
-- kube-prometheus-stack deployment
-- Rate Limiter Service: FastAPI + Redis sliding window, 10 req/min per key, 429 with Retry-After
-- GitHub Actions CI/CD pipeline for building and pushing container images
-- Network policies for pod communication control
-- ArgoCD Deployment, GitOps sync from this repo, sync waves for ordered deployment
 ## What's Next
 
 These features are documented but not yet implemented:

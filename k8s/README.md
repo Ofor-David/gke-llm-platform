@@ -7,8 +7,9 @@ This directory contains the Kubernetes manifests and Helm charts for deploying t
 The platform consists of:
 - **auth-service**: Authentication service handling API key validation
 - **rate-limiter**: FastAPI + Redis sliding window rate limiter (10 req/min per API key)
+- **metrics-exporter**: Prometheus metrics sidecar for Ollama (tokens, latency, queue depth, cost)
 - **ollama**: LLM inference server with autoscaling support
-- **argocd**: GitOps continuous delivery
+- **argocd**: GitOps continuous delivery with 14 synchronized applications
 
 ## Prerequisites
 
@@ -16,45 +17,45 @@ The platform consists of:
 - kubectl configured with cluster access
 - [Helm v3+](https://helm.sh/docs/intro/install/)
 - [Helmfile](https://helmfile.readthedocs.io/)
-- [Kustomize](https://kubectl.docs.kubernetes.io/guides/introduction/kustomize/)
 - [Linkerd CLI](https://linkerd.io/2.16/getting-started/) (for mesh diagnostics)
 
 ## Quick Start
 
+ArgoCD is deployed first and manages all other deployments. The root application watches `k8s/argocd/apps/`.
+
 ```bash
-# Apply namespaces first
+# Create all required namespaces
 kubectl apply -f namespaces.yaml
 
-# Deploy all pre releases via helmfile
-helmfile apply -l order=pre
+# Deploy ArgoCD (via helmfile or direct helm)
+helmfile apply -l name=argocd
 
-# Deploy non helm manifests
-kubectl apply -k certs 
-```
-Run `kubectl get certificates -A` to verify proper installation. Should return a response like this:
-```
-NAMESPACE      NAME                      READY   SECRET                    AGE
-cert-manager   linkerd-trust-anchor      True    linkerd-trust-anchor      20s
-cert-manager   trust-manager             True    trust-manager-tls         20s
-gateway-api    llm-platform-tls          True    gateway-tls               20s
-linkerd        linkerd-identity-issuer   True    linkerd-identity-issuer   20s
-```
-Duplicate linkerd trust anchor. Needed for certificate rotation later on.
+# Apply the argocd root app manifest
+kubectl apply -f argocd/root-app.yaml
 
 ```
-kubectl get secret -n cert-manager linkerd-trust-anchor -o yaml \
-        | sed -e s/linkerd-trust-anchor/linkerd-previous-anchor/ \
-        | egrep -v '^  *(resourceVersion|uid)' \
-        | kubectl apply -f - 
-```
 
-Deploy external secrets, gateway api for ingress, and remaining helm releases.
+## ArgoCD Applications
 
-```
-kubectl apply -f secrets -f gateway_api
+The platform uses **14 ArgoCD Applications** for GitOps deployment:
 
-helmfile apply -l order=post
-```
+| Application | Wave | Description |
+|------------|------|-------------|
+| cert-manager | 0 | TLS certificate management |
+| external-secrets | 0 | Secrets from GCP Secret Manager |
+| keda | 0 | Event-driven autoscaling |
+| linkerd-crds | 0 | Linkerd CRDs |
+| trust-manager | 1 | Trust anchor management |
+| secrets-manifests | 1 | SecretStore and ExternalSecrets |
+| gateway-api-manifests | 1 | Gateway API routes |
+| linkerd-control-plane | 2 | Linkerd service mesh control plane |
+| linkerd-viz | 2 | Linkerd dashboard and debugging |
+| kube-prometheus | 2 | Prometheus, Grafana, Alertmanager |
+| auth-service | 3 | Authentication service |
+| rate-limiter | 3 | Rate limiting with Redis |
+| ollama | 3 | LLM inference server |
+| network-policies | 4 | Pod network policies |
+
 
 ## Directory Structure
 
@@ -62,6 +63,9 @@ helmfile apply -l order=post
 k8s/
 ├── namespaces.yaml          # Namespace definitions
 ├── helmfile.yaml            # Helm releases configuration
+├── argocd/                  # ArgoCD applications
+│   ├── root-app.yaml        # Root application pointing to apps/
+│   └── apps/                # 14 Application manifests
 ├── docs/                    # Documentation for components
 ├── platform/                # Platform components
 │   ├── cert-manager/        # cert-manager certificate resources
@@ -71,14 +75,20 @@ k8s/
 ├── charts/                  # Helm charts
 │   ├── auth-service/        # Auth service Helm chart
 │   ├── rate-limiter/        # Rate limiter Helm chart (sliding window)
-│   └── ollama/              # Ollama Helm chart
+│   ├── ollama/              # Ollama Helm chart
+│   └── metrics-exporter/    # Metrics exporter Helm chart
 └── values/                  # Helm values for releases
 ```
 
 ## Deployment Order
 
-1. **Pre-install**: argocd, cert-manager, trust-manager, external-secrets, keda, linkerd-crds
-2. **Post-install**: linkerd-control-plane, linkerd-viz, kube-prometheus, auth-service, rate-limiter, ollama
+ArgoCD uses **sync waves** for ordered deployment:
+
+1. **Wave 0**: cert-manager, external-secrets, keda, linkerd-crds
+2. **Wave 1**: trust-manager, secrets-manifests, gateway-api-manifests
+3. **Wave 2**: linkerd-control-plane, linkerd-viz, kube-prometheus
+4. **Wave 3**: auth-service, rate-limiter, ollama
+5. **Wave 4**: network-policies
 
 ## Monitoring
 
@@ -87,6 +97,11 @@ Prometheus is available in the `monitoring` namespace. Access via:
 kubectl port-forward -n monitoring svc/kube-prometheus-kube-prome-prometheus 9090
 ```
 
+Grafana (built into kube-prometheus-stack):
+```bash
+kubectl port-forward -n monitoring svc/kube-prometheus-grafana 3000
+```
+
 ## Troubleshooting
 
-See [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) for common issues.
+See [TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md) for common issues.

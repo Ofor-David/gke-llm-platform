@@ -182,3 +182,58 @@ kubectl get endpoints <service-name> -n <namespace>
 # Check Linkerd proxy
 linkerd check --proxy
 ```
+
+## ArgoCD Issues
+
+### Check ArgoCD Applications
+
+```bash
+kubectl get applications -n argocd
+kubectl get applications -n argocd -o wide
+```
+
+### Application Status
+
+```bash
+kubectl describe application <app-name> -n argocd
+```
+
+### View Application Sync Status
+
+```bash
+argocd app get <app-name>
+argocd app history <app-name>
+argocd app rollback <app-name> <revision>
+```
+
+### ArgoCD Logs
+
+```bash
+kubectl logs -n argocd -l app.kubernetes.io/name=argocd-server
+kubectl logs -n argocd -l app.kubernetes.io/name=argocd-application-controller
+```
+
+### Common ArgoCD Issues
+
+#### Application Out of Sync
+
+1. Check for diffs: `argocd app diff <app-name>`
+2. Force sync: `argocd app sync <app-name>`
+3. Check for resource conflicts
+
+#### Application Sync Failed
+
+```bash
+kubectl describe application <app-name> -n argocd
+# Check events for error messages
+```
+
+#### ArgoCD UI Access
+
+```bash
+kubectl port-forward -n argocd svc/argocd-server 8080:443
+```
+
+Default username: `admin`. Password:
+```bash
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d

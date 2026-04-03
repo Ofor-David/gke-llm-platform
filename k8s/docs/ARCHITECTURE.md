@@ -1,51 +1,3 @@
-# Architecture
-
-## Components
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        Gateway API                              │
-│                     (gateway-api namespace)                     │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                       Linkerd Service Mesh                      │
-│                     (linkerd namespace - mTLS)                  │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-                ┌───────────────┴───────────────┐
-                ▼                               ▼
-┌───────────────────────────┐   ┌───────────────────────────────┐
-│      auth-service         │   │         ollama                │
-│    (auth namespace)       │   │     (inference namespace)    │
-│                           │   │                               │
-│  - API key validation     │   │  - LLM inference              │
-│  - IP allowlisting        │   │  - KEDA autoscaling           │
-│  - Ollama proxy           │   │  - Metrics exporter           │
-└───────────────────────────┘   │  - PVC for models             │
-                │               └───────────────────────────────┘
-                ▼
-┌───────────────────────────┐
-│      rate-limiter          │
-│    (ratelimit namespace)   │
-│                           │
-│  - Sliding window Redis    │
-│  - 10 req/min per key     │
-│  - Returns 429 + Retry-   │
-│    After on limit         │
-└───────────────────────────┘
-
-┌───────────────────────────┐
-│        ArgoCD             │
-│    (argocd namespace)     │
-│                           │
-│  - GitOps deployment      │
-│  - Application sync       │
-│  - UI dashboard           │
-└───────────────────────────┘
-```
-
 ## Namespaces
 
 | Namespace | Purpose |
@@ -55,10 +7,31 @@
 | `keda` | Event-driven autoscaling |
 | `gateway-api` | Ingress configuration |
 | `monitoring` | Prometheus, Grafana, Alertmanager |
-| `argocd` | GitOps continuous delivery |
+| `argocd` | GitOps continuous delivery (14 applications) |
 | `auth` | Authentication service |
 | `ratelimit` | Rate limiter (sliding window Redis) |
 | `inference` | Ollama LLM inference |
+
+## ArgoCD Applications
+
+The platform uses **14 ArgoCD Applications** for GitOps deployment with sync waves:
+
+| Wave | Application | Chart/Path |
+|------|-------------|------------|
+| 0 | cert-manager | cert-manager/cert-manager v1.19.2 |
+| 0 | external-secrets | external-secrets v2.0.0 |
+| 0 | keda | kedacore/keda v2.19.0 |
+| 0 | linkerd-crds | linkerd-edge/linkerd-crds 2026.2.1 |
+| 1 | trust-manager | cert-manager/trust-manager v0.21.1 |
+| 1 | secrets-manifests | k8s/platform/secrets |
+| 1 | gateway-api-manifests | k8s/platform/gateway-api |
+| 2 | linkerd-control-plane | linkerd-edge 2026.2.1 |
+| 2 | linkerd-viz | linkerd-edge 2026.2.1 |
+| 2 | kube-prometheus | prometheus-community v82.1.0 |
+| 3 | auth-service | k8s/charts/auth-service |
+| 3 | rate-limiter | k8s/charts/rate-limiter |
+| 3 | ollama | k8s/charts/ollama |
+| 4 | network-policies | k8s/platform/network-policies |
 
 ## Networking
 
