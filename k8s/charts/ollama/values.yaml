@@ -17,7 +17,7 @@ resources:
 metricsExporter:
   image:
     repository: europe-west4-docker.pkg.dev/seventh-azimuth-488017-b3/container-images/metrics-exporter
-    tag: "8f59521fcc6ed877111db1fc95cf423d726ea610"
+    tag: "fd5936c7ea7684392bbe71f7ff5eea41c4c4d254"
   prometheusService: http://kube-prometheus-kube-prome-prometheus.monitoring.svc.cluster.local
   prometheusPort: 9090
   resources:
