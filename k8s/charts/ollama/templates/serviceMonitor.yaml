@@ -10,6 +10,6 @@ spec:
     matchLabels:
       app: ollama
   endpoints:
-    - port: metrics
+    - port: inference
       interval: 15s
       path: /metrics

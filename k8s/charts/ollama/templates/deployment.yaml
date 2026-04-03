@@ -76,7 +76,6 @@ spec:
         - name: metrics-exporter
           image: {{ .Values.metricsExporter.image.repository }}:{{ .Values.metricsExporter.image.tag }}
           ports:
-            - containerPort: 8080
             - containerPort: 11435
           env:
             - name: OLLAMA_URL

@@ -12,6 +12,3 @@ spec:
     - name: inference
       port: 11435
       targetPort: 11435
-    - name: metrics
-      port: 8080
-      targetPort: 8080 
