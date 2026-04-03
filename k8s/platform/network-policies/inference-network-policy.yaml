@@ -36,7 +36,7 @@ spec:
               kubernetes.io/metadata.name: monitoring
       ports:
         - protocol: TCP
-          port: 8080
+          port: 11435
 
 ---
 # Allow ollama to egress to external registries (GCP, ollama.ai) for container images and models
