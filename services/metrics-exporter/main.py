@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 INSTANCE_COST_PER_HOUR = float(os.getenv("INSTANCE_COST_PER_HOUR", "0.031"))
-METRICS_PORT = int(os.getenv("METRICS_PORT", "8080"))
 PROXY_PORT = int(os.getenv("PROXY_PORT", "11435"))
 
 # --- Metrics ---
@@ -172,8 +171,6 @@ async def proxy(path: str, request: Request):
     full duration of the StreamingResponse — fixes the 'stream closed'
     error caused by async with context manager exiting on return.
     """
-    if path == "metrics" or path.startswith("metrics/"):
-        return JSONResponse(status_code=404, content={"detail": "Not found"})
     
     body = await request.body()
     start = time.time()
