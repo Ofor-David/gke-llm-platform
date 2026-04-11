@@ -318,7 +318,7 @@ defaultRules:
 ## Provide custom recording or alerting rules to be deployed into the cluster.
 ##
 additionalPrometheusRulesMap:
-  inference_rules:
+  inference-rules:
     groups:
       - name: inference_recording_rules
         rules:
