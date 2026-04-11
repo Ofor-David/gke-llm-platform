@@ -1,11 +1,15 @@
 provider "google" {
-  project     = var.project_id
-  region      = var.region
+  project = var.project_id
+  region  = var.region
 }
-provider "kubernetes" {
-  config_path = "~/.kube/config"
-}
+
 terraform {
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = "7.26.0"
+    }
+  }
   backend "gcs" {
     bucket = "llm-platform-state-bucket"
     prefix = "tf-state"
