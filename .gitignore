@@ -1,5 +1,4 @@
 *.terraform*
-connect-gke.sh
 *.tfvars
 *tfstate
 logs
