@@ -17,13 +17,13 @@ Companies that write proprietary software face a dilemma with AI coding tools: t
 Every API request flows through:
 
 ```
-Internet → GKE Gateway → Auth Service → Rate Limiter → Metrics Exporter → Ollama
+Internet → GKE Gateway (GCP L7 Global Load Balancer) → Auth Service → Rate Limiter → Ollama Proxy (metrics exporter) → Ollama
 ```
 
-1. **Gateway**: GCP L7 Global Load Balancer with TLS via Let's Encrypt
+1. **Gateway**: GCP L7 Global Load Balancer with TLS via Let's Encrypt for the `xikhub.store` domain
 2. **Auth Service**: validates API keys, enforces IP allowlist
 3. **Rate Limiter**: 10 requests/minute per key using Redis
-4. **Metrics Exporter**: extracts token counts and durations, exposes to Prometheus
+4. **Metrics Exporter (Ollama Proxy)**: Python reverse proxy intercepting requests to extract token counts and durations, exposes to Prometheus
 5. **Ollama**: serves Qwen2.5-coder 1.5B on CPU
 
 ## Architecture
@@ -31,10 +31,11 @@ Internet → GKE Gateway → Auth Service → Rate Limiter → Metrics Exporter 
 ![Project High Level Architecture](./llm-platform-archi.png)
 ### Infrastructure
 - **GCP Region**: europe-west4 (Amsterdam): GDPR compliance, low latency for Western Europe
+- **Infrastructure as Code**: Terraform with remote state in GCS.
 - **GKE Cluster**: Private cluster with two node pools
   - System pool: for platform services (ArgoCD, Prometheus, cert-manager, etc.)
-  - Inference pool: Spot instances for Ollama (60-91% discount)
-- **Networking**: VPC with subnets for GKE and bastion, Cloud NAT for egress, Cloud DNS with DNSSEC
+  - Inference pool: Spot instances for Ollama (60-91% discount). Minimum 1 node maintained (warm node) to avoid 5-6 minute cold start.
+- **Networking**: VPC with subnets for GKE and bastion, Cloud NAT for egress, Cloud DNS with DNSSEC serving `xikhub.store`
 - **Bastion**: Jump host for private cluster access via IAP tunneling
 
 ### Application Services
@@ -65,11 +66,14 @@ Eight independent layers: each assumes the ones above may be compromised:
 ## Observability
 
 - **kube-prometheus-stack**: Prometheus, Grafana, Alertmanager, node-exporter, kube-state-metrics (v82.1.0)
+- **Grafana Dashboards**: Three custom dashboards are implemented:
+  - *Cluster Overview*: Node CPU, memory, and pod health.
+  - *Inference Metrics*: Request rate, p50/p95/p99 latency, error rate, and queue depth.
+  - *LLM-Specific*: Tokens per second, prompt eval duration, generation duration, model load status, and estimated cost per hour (Prometheus recording rules × GCP instance pricing).
 - **Metrics exporter sidecar**: Intercepts every Ollama request/response, extracts:
   - Token counts (prompt, completion, total)
   - Durations (prompt eval, generation)
   - Queue depth for KEDA scaling
-  - Cost per hour (instance price × pod count via recording rules)
 
 ## What's Implemented
 
@@ -81,10 +85,10 @@ Eight independent layers: each assumes the ones above may be compromised:
 - KEDA autoscaling based on queue depth
 - kube-prometheus-stack deployment (Prometheus, Grafana, Alertmanager)
 - Rate Limiter Service: FastAPI + Redis sliding window, 10 req/min per key, 429 with Retry-After
-- Metrics Exporter: Prometheus metrics sidecar for Ollama (tokens, latency, queue depth, cost)
-- GitHub Actions CI/CD pipeline for building and pushing container images (auth-service, rate-limiter, metrics-exporter)
+- Metrics Exporter: Prometheus metrics sidecar proxy for Ollama (tokens, latency, queue depth, cost)
+- **CI/CD Pipeline**: GitHub Actions builds on commit, pushes to Artifact Registry. Uses GCP Workload Identity Federation (no static credentials in GitHub).
 - Network policies for pod communication control
-- ArgoCD Deployment with 14 GitOps applications, sync waves for ordered deployment
+- ArgoCD Deployment with 17 GitOps applications, sync waves for ordered deployment
 
 ### Required GitHub Repository Secrets
 
@@ -116,14 +120,10 @@ llm-platform/
     └── metrics-exporter/ # Prometheus metrics sidecar
 ```
 
-## What's Next
-
-These features are documented but not yet implemented:
-
-1. **Grafana Dashboards**: cluster overview, inference metrics, LLM-specific with cost visibility
-
 ## Deployment
 
 See [terraform/README.md](./terraform/README.md) for infrastructure setup.
 
 See [k8s/README.md](./k8s/README.md) for Kubernetes deployment.
+
+> **Note on Secrets Synchronization**: Before External Secrets Operator (ESO) can sync secrets from GCP Secret Manager, the initial Kubernetes Secret mapping to the GCP Service Account (used by ESO) must be created manually using the `gcloud` CLI or the GCP console.

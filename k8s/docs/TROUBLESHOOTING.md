@@ -75,6 +75,18 @@ kubectl logs -n cert-manager -l app.kubernetes.io/name=cert-manager
 
 ## Autoscaling Issues (KEDA)
 
+### Check Custom Metric (Queue Depth)
+
+If KEDA is not scaling correctly, check if the `ollama_queue_depth` metric is being correctly exposed by the metrics-exporter proxy:
+
+```bash
+# Port-forward to the metrics-exporter service
+kubectl port-forward -n inference svc/metrics-exporter 8000:8000
+
+# Fetch the metrics
+curl http://localhost:8000/metrics | grep ollama_queue_depth
+```
+
 ### Check ScaledObjects
 
 ```bash

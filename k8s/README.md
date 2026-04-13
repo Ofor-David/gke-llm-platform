@@ -7,7 +7,7 @@ This directory contains the Kubernetes manifests and Helm charts for deploying t
 The platform consists of:
 - **auth-service**: Authentication service handling API key validation
 - **rate-limiter**: FastAPI + Redis sliding window rate limiter (10 req/min per API key)
-- **metrics-exporter**: Prometheus metrics sidecar for Ollama (tokens, latency, queue depth, cost)
+- **metrics-exporter**: Custom Python reverse proxy intercepting requests to expose Prometheus metrics for Ollama (tokens, latency, queue depth, cost)
 - **ollama**: LLM inference server with autoscaling support
 - **argocd**: GitOps continuous delivery with 14 synchronized applications
 
@@ -17,7 +17,7 @@ The platform consists of:
 - kubectl configured with cluster access
 - [Helm v3+](https://helm.sh/docs/intro/install/)
 - [Helmfile](https://helmfile.readthedocs.io/)
-- [Linkerd CLI](https://linkerd.io/2.16/getting-started/) (for mesh diagnostics)
+- [Linkerd CLI](https://linkerd.io/) (version 2026.2.1 edge, for mesh diagnostics)
 
 ## Quick Start
 
@@ -101,6 +101,21 @@ Grafana (built into kube-prometheus-stack):
 ```bash
 kubectl port-forward -n monitoring svc/kube-prometheus-grafana 3000
 ```
+
+## Grafana Dashboards
+
+This project includes several Grafana dashboards, which are declaratively managed and deployed as ConfigMaps.
+
+| Dashboard | Description |
+| :--- | :--- |
+| **Cluster Overview** | Custom dashboard showing node CPU, memory, and pod health across the platform. |
+| **Inference Metrics** | Custom dashboard monitoring key inference performance indicators such as request rate, latency (p50/p95/p99), error rate, and queue depth. |
+| **LLM-Specific Metrics** | Custom dashboard providing insights into LLM-specific data, including tokens per second, prompt eval duration, generation duration, model load status, and estimated cost per hour (derived from Prometheus recording rules multiplied against GCP instance pricing). |
+| **Kubernetes / Views / Global*** | A comprehensive overview of the entire Kubernetes cluster, including global CPU and RAM usage, and a Kubernetes resource count. |
+| **Kubernetes / Views / Nodes*** | Detailed metrics for each node in the cluster, covering CPU, memory, and disk usage, as well as pod information and network statistics. |
+| **Kubernetes / Views / Namespaces*** | A breakdown of resource usage by namespace, including CPU and RAM usage, pod statuses, and storage details. |
+
+All the **Kubernetes / Views/\*** dashboards are from the [grafana-dashboards-kubernetes](https://github.com/dotdc/grafana-dashboards-kubernetes/tree/master) repository and are subject to its license.*
 
 ## Troubleshooting
 

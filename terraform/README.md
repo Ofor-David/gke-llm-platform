@@ -13,33 +13,12 @@ This Terraform project provisions a complete GKE-based infrastructure for hostin
 - IAM roles and workload identity
 - Bastion host for private cluster access
 
-## Architecture
-
-```
-                                    ┌─────────────────────┐
-                                    │   Cloud DNS Zone    │
-                                    │   (Private/Public)  │
-                                    └──────────┬──────────┘
-                                               │
-                                    ┌──────────┴──────────┐
-                                    │  Cloud NAT / Cloud  │
-                                    │  Router ( egress )  │
-                                    └──────────┬──────────┘
-                                               │
-                     ┌─────────────────────────┼──────────────────────────┐
-                     │                         │                          │
-            ┌────────┴────────┐       ┌────────┴────────┐        ┌────────┴────────┐
-            │   Bastion Host  │       │   GKE Cluster   │        │ Artifact Reg    │
-            │  (Jump Server)  │       │  (Private EP)   │        │ (Docker images) │
-            └─────────────────┘       └─────────────────┘        └─────────────────┘
-  ```
-
 ## Prerequisites
 
 - Google Cloud SDK (`gcloud`) installed and configured
 - Terraform >= 1.6.0
 - Valid GCP project with billing enabled
-- Bucket for Terraform state (specified in `provider.tf`)
+- GCS Bucket for Terraform remote state (specified in `provider.tf`)
 
 ## Usage
 
@@ -64,6 +43,8 @@ system_node_disk_size  = 100
 system_node_disk_type  = "pd-ssd"
 max_system_node_count  = 1
 
+# Inference pool deliberately uses Spot instances for significant cost savings (60-91%).
+# Minimum node count is maintained at 1 to ensure a warm node and avoid a 5-6 minute cold start.
 inference_node_type    = "n2-standard-8"
 inference_node_disk_size = 500
 inference_node_disk_type = "pd-ssd"
@@ -81,7 +62,7 @@ github_repo   = "your-username/your-repo"
 repo_owner_id = "your-github-org-id"
 
 # DNS
-dns_name = "your-domain.com"
+dns_name = "xikhub.store"
 ```
 
 ### 3. Plan and Apply
@@ -178,14 +159,6 @@ To destroy all resources:
 ```bash
 terraform destroy
 ```
-
-## Requirements
-
-| Name | Version |
-|------|---------|
-| terraform | >= 1.6.0 |
-| google | ~> 5.0 |
-| kubernetes | ~> 2.0 |
 
 ## License
 

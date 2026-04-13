@@ -8,7 +8,7 @@ Certificates are managed by cert-manager in the `cert-manager` namespace.
 
 - **Linkerd Identity**: Used for mTLS between services
 - **Trust Anchor**: Root CA for Linkerd
-- **LLM Platform**: Application-specific certificates
+- **LLM Platform**: Application-specific certificates. TLS termination at the Gateway uses Let's Encrypt certificates issued and auto-renewed by cert-manager via DNS-01 challenge against GCP Cloud DNS for the `xikhub.store` domain.
 
 ### Certificate Rotation
 
@@ -37,7 +37,10 @@ kubectl get issuers -A
 
 ### External Secrets
 
-Secrets are managed via External Secrets Operator in `cert-manager` namespace.
+Secrets are managed via External Secrets Operator (ESO) in `cert-manager` namespace. ESO is configured to authenticate to GCP Secret Manager using Workload Identity.
+
+**Important Note on ESO Setup:** 
+Before the External Secrets Operator can sync secrets from GCP Secret Manager, the initial Kubernetes Secret containing the mapping to the GCP Service Account (if required by your specific ESO configuration) **must be created manually** using the `gcloud` CLI or the GCP console.
 
 Configuration files in `platform/secrets/`:
 - `secret-store.yaml`: SecretStore provider configuration
@@ -99,6 +102,11 @@ When a client exceeds the limit, the rate limiter returns:
 - `Retry-After` header indicating seconds to wait
 
 This allows clients to implement automatic backoff without manual intervention.
+
+## CI/CD Pipeline Security
+
+- GitHub Actions builds container images and pushes them to GCP Artifact Registry.
+- Authentication from GitHub Actions to GCP is handled securely via **Workload Identity Federation**. No static service account keys are stored in GitHub secrets.
 
 ## GATEWAY API
 

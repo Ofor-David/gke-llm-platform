@@ -45,8 +45,9 @@ The platform uses **14 ArgoCD Applications** for GitOps deployment with sync wav
 1. Client request → Gateway API → Linkerd ingress
 2. Linkerd routes to auth-service (authentication)
 3. Authenticated requests forwarded to rate-limiter (sliding window check)
-4. If within limit, request proceeds to ollama for inference
-5. Response returned through Linkerd mesh
+4. If within limit, request proceeds to the metrics-exporter proxy
+5. Metrics-exporter intercepts request, extracts inference metrics, and forwards to Ollama
+6. Response returned through Linkerd mesh
 
 ## Network Policies
 
@@ -80,4 +81,7 @@ This is a smart architectural choice because it protects the platform from runaw
 
 ## Autoscaling
 
-- KEDA scales ollama replicas based on Prometheus metrics
+- KEDA scales Ollama replicas based on the custom Prometheus metric `ollama_queue_depth` (exposed by the metrics exporter sidecar).
+- **Scale Up Threshold**: When queue depth exceeds 3 concurrent requests, KEDA adds a second Ollama pod.
+- **Scale Down**: Scales back down when queue depth falls below the threshold for 5 minutes.
+- **Minimum Replicas**: The minimum replica count is maintained at 1 (warm node/pod). It does not scale to zero in order to avoid a 5-6 minute cold start delay.
