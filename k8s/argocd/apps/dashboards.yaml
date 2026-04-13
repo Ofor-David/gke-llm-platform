@@ -1,22 +1,22 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: auth-service
+  name: dashboards
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "4"
+    argocd.argoproj.io/sync-wave: "5"
 spec:
   project: default
   source:
     repoURL: https://github.com/Ofor-David/gke-llm-platform.git
-    path: k8s/charts/auth-service              
-    targetRevision: main                    
+    path: k8s/dashboards/configmaps
+    targetRevision: main
   destination:
     server: https://kubernetes.default.svc
-    namespace: auth
+    namespace: monitoring
   syncPolicy:
     automated:
       prune: true
     syncOptions:
-      - CreateNamespace=false
+      - CreateNamespace=true
       - ServerSideApply=true
