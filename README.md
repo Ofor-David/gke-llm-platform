@@ -122,8 +122,36 @@ llm-platform/
 
 ## Deployment
 
+### Prerequisites & Configuration
+
+Before deploying, you must customize several project-specific identifiers in the codebase to match your GCP environment and domain configuration.
+
+#### 1. GCP Project ID
+Replace all instances of the placeholder `seventh-azimuth-488017-b3` with your actual GCP Project ID in the following Kubernetes manifests and Helm values (note: terraform directory replacements are omitted here):
+
+* **Kubernetes Manifests:**
+  * `k8s/platform/cert-manager/llm-platform-clusterIssuer.yaml` (Line 14)
+  * `k8s/platform/secrets/secret-store.yaml` (Lines 7, 18)
+  * `k8s/values/cert-manager.yaml` (Line 223)
+* **Helm Chart Values:**
+  * `k8s/charts/auth-service/values.yaml` (Line 2)
+  * `k8s/charts/rate-limiter/values.yaml` (Line 2)
+  * `k8s/charts/ollama/values.yaml` (Lines 2, 19)
+
+#### 2. Domain Name
+Replace all instances of `xikhub.store` with your custom domain name in the following files:
+
+* `k8s/platform/cert-manager/llm-platform-certificate.yaml` (Lines 12, 13, 14)
+* `k8s/platform/gateway-api/routes.yaml` (Lines 12, 35, 58, 80, 81, 82)
+* `k8s/values/argocd.yaml` (Line 46)
+
+#### 3. GCP Service Accounts
+Workload identity relies on matching KSA (Kubernetes Service Accounts) to GSA (GCP Service Accounts). When updating your Project ID, double-check that the resulting GSA emails match what you have provisioned:
+* `secrets-sa@<YOUR-PROJECT-ID>.iam.gserviceaccount.com` in `k8s/platform/secrets/secret-store.yaml` (Line 7)
+* `cert-manager-dns@<YOUR-PROJECT-ID>.iam.gserviceaccount.com` in `k8s/values/cert-manager.yaml` (Line 223)
+
 See [terraform/README.md](./terraform/README.md) for infrastructure setup.
 
-See [k8s/README.md](./k8s/README.md) for Kubernetes deployment.
+See [k8s/README.md](./k8s/README.md) for Kubernetes deployment and details on the ArgoCD sync waves.
 
 > **Note on Secrets Synchronization**: Before External Secrets Operator (ESO) can sync secrets from GCP Secret Manager, the initial Kubernetes Secret mapping to the GCP Service Account (used by ESO) must be created manually using the `gcloud` CLI or the GCP console.

@@ -51,12 +51,14 @@ The platform uses **14 ArgoCD Applications** for GitOps deployment:
 | linkerd-control-plane | 2 | Linkerd service mesh control plane |
 | linkerd-viz | 2 | Linkerd dashboard and debugging |
 | kube-prometheus | 2 | Prometheus, Grafana, Alertmanager |
-| auth-service | 3 | Authentication service |
-| rate-limiter | 3 | Rate limiting with Redis |
-| ollama | 3 | LLM inference server |
-| network-policies | 4 | Pod network policies |
+| linkerd-wait | 3 | Sync hook to delay wave 4 until Linkerd webhook is ready |
+| auth-service | 4 | Authentication service |
+| rate-limiter | 4 | Rate limiting with Redis |
+| ollama | 4 | LLM inference server |
+| dashboards | 5 | Grafana dashboard configmaps |
+| network-policies | 5 | Pod network policies |
 
-
+    
 ## Directory Structure
 
 ```
@@ -87,8 +89,9 @@ ArgoCD uses **sync waves** for ordered deployment:
 1. **Wave 0**: cert-manager, external-secrets, keda, linkerd-crds
 2. **Wave 1**: trust-manager, secrets-manifests, gateway-api-manifests
 3. **Wave 2**: linkerd-control-plane, linkerd-viz, kube-prometheus
-4. **Wave 3**: auth-service, rate-limiter, ollama
-5. **Wave 4**: network-policies
+4. **Wave 3 (Linkerd Wait Mechanism)**: A critical `linkerd-wait` Job executes a 30-second sleep. ArgoCD considers the Linkerd control plane (Wave 2) healthy immediately, but the Mutating Webhook takes slightly longer to register with the Kubernetes API server. This wait guarantees the webhook is fully operational so it does not silently drop sidecar injection for the subsequent application workloads.
+5. **Wave 4**: Application workloads safely deploy (`auth-service`, `rate-limiter`, `ollama`) and successfully receive Linkerd sidecar injections.
+6. **Wave 5**: dashboards, network-policies
 
 ## Monitoring
 
