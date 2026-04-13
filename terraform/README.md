@@ -133,6 +133,22 @@ This script:
 
 To stop the tunnel, press Ctrl+C or run `kill` on the tunnel process.
 
+#### Troubleshooting
+
+**Certificate Authority Error**
+If you encounter the following error when connecting or running `kubectl` commands:
+```text
+E0413 15:20:17.119962   49278 memcache.go:265] "Unhandled Error" err="couldn't get current server API group list: Get \"https://localhost:8888/api?timeout=32s\": tls: failed to verify certificate: x509: certificate signed by unknown authority"
+```
+This indicates that your `kubeconfig` context exists but is missing the correct certificate authority data. To resolve this, manually refresh your cluster credentials using the correct arguments for your environment:
+
+```bash
+gcloud container clusters get-credentials <your-cluster-name> \
+  --location=<your-region-or-zone> \
+  --project=<your-project-id>
+```
+Then, run `./connect-gke.sh` again.
+
 ### Manual setup
 
 If you need to configure manually:

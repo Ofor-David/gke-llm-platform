@@ -103,6 +103,19 @@ kubectl logs -n keda -l app=keda-operator
 
 ## Network Issues
 
+### TLS / Certificate Authority Error when connecting to cluster
+If you are using the IAP tunnel (`connect-gke.sh`) and see this error:
+```text
+E0413 15:20:17.119962   49278 memcache.go:265] "Unhandled Error" err="couldn't get current server API group list: Get \"https://localhost:8888/api?timeout=32s\": tls: failed to verify certificate: x509: certificate signed by unknown authority"
+```
+Your local `kubeconfig` is missing the correct cluster certificate authority data. Refresh your credentials using the `gcloud` CLI:
+```bash
+gcloud container clusters get-credentials <your-cluster-name> \
+  --location=<your-region-or-zone> \
+  --project=<your-project-id>
+```
+Then restart the tunnel script.
+
 ### Test Service Connectivity
 
 ```bash
