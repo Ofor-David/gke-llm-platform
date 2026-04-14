@@ -9,7 +9,7 @@ The platform consists of:
 - **rate-limiter**: FastAPI + Redis sliding window rate limiter (10 req/min per API key)
 - **metrics-exporter**: Custom Python reverse proxy intercepting requests to expose Prometheus metrics for Ollama (tokens, latency, queue depth, cost)
 - **ollama**: LLM inference server with autoscaling support
-- **argocd**: GitOps continuous delivery with 14 synchronized applications
+- **argocd**: GitOps continuous delivery with 17 synchronized applications
 
 ## Prerequisites
 
@@ -37,7 +37,7 @@ kubectl apply -f argocd/root-app.yaml
 
 ## ArgoCD Applications
 
-The platform uses **14 ArgoCD Applications** for GitOps deployment:
+The platform uses **17 ArgoCD Applications** for GitOps deployment:
 
 | Application | Wave | Description |
 |------------|------|-------------|
@@ -46,6 +46,7 @@ The platform uses **14 ArgoCD Applications** for GitOps deployment:
 | keda | 0 | Event-driven autoscaling |
 | linkerd-crds | 0 | Linkerd CRDs |
 | trust-manager | 1 | Trust anchor management |
+| cert-manifests | 1 | ClusterIssuers and Certificates |
 | secrets-manifests | 1 | SecretStore and ExternalSecrets |
 | gateway-api-manifests | 1 | Gateway API routes |
 | linkerd-control-plane | 2 | Linkerd service mesh control plane |
@@ -67,7 +68,7 @@ k8s/
 ├── helmfile.yaml            # Helm releases configuration
 ├── argocd/                  # ArgoCD applications
 │   ├── root-app.yaml        # Root application pointing to apps/
-│   └── apps/                # 14 Application manifests
+│   └── apps/                # 17 Application manifests
 ├── docs/                    # Documentation for components
 ├── platform/                # Platform components
 │   ├── cert-manager/        # cert-manager certificate resources

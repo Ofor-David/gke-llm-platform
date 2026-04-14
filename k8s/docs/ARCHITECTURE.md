@@ -7,14 +7,14 @@
 | `keda` | Event-driven autoscaling |
 | `gateway-api` | Ingress configuration |
 | `monitoring` | Prometheus, Grafana, Alertmanager |
-| `argocd` | GitOps continuous delivery (14 applications) |
+| `argocd` | GitOps continuous delivery (17 applications) |
 | `auth` | Authentication service |
 | `ratelimit` | Rate limiter (sliding window Redis) |
 | `inference` | Ollama LLM inference |
 
 ## ArgoCD Applications
 
-The platform uses **14 ArgoCD Applications** for GitOps deployment with sync waves:
+The platform uses **17 ArgoCD Applications** for GitOps deployment with sync waves:
 
 | Wave | Application | Chart/Path |
 |------|-------------|------------|
@@ -23,15 +23,18 @@ The platform uses **14 ArgoCD Applications** for GitOps deployment with sync wav
 | 0 | keda | kedacore/keda v2.19.0 |
 | 0 | linkerd-crds | linkerd-edge/linkerd-crds 2026.2.1 |
 | 1 | trust-manager | cert-manager/trust-manager v0.21.1 |
+| 1 | cert-manifests | k8s/platform/cert-manager |
 | 1 | secrets-manifests | k8s/platform/secrets |
 | 1 | gateway-api-manifests | k8s/platform/gateway-api |
 | 2 | linkerd-control-plane | linkerd-edge 2026.2.1 |
 | 2 | linkerd-viz | linkerd-edge 2026.2.1 |
 | 2 | kube-prometheus | prometheus-community v82.1.0 |
-| 3 | auth-service | k8s/charts/auth-service |
-| 3 | rate-limiter | k8s/charts/rate-limiter |
-| 3 | ollama | k8s/charts/ollama |
-| 4 | network-policies | k8s/platform/network-policies |
+| 3 | linkerd-wait | argocd Job |
+| 4 | auth-service | k8s/charts/auth-service |
+| 4 | rate-limiter | k8s/charts/rate-limiter |
+| 4 | ollama | k8s/charts/ollama |
+| 5 | dashboards | k8s/dashboards/configmaps |
+| 5 | network-policies | k8s/platform/network-policies |
 
 ## Networking
 
