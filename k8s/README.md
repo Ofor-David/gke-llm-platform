@@ -112,7 +112,6 @@ This project includes several Grafana dashboards, which are declaratively manage
 
 | Dashboard | Description |
 | :--- | :--- |
-| **Cluster Overview** | Custom dashboard showing node CPU, memory, and pod health across the platform. |
 | **Inference Metrics** | Custom dashboard monitoring key inference performance indicators such as request rate, latency (p50/p95/p99), error rate, and queue depth. |
 | **LLM-Specific Metrics** | Custom dashboard providing insights into LLM-specific data, including tokens per second, prompt eval duration, generation duration, model load status, and estimated cost per hour (derived from Prometheus recording rules multiplied against GCP instance pricing). |
 | **Kubernetes / Views / Global*** | A comprehensive overview of the entire Kubernetes cluster, including global CPU and RAM usage, and a Kubernetes resource count. |
