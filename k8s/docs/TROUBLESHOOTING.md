@@ -173,6 +173,19 @@ kubectl get pods -n ratelimit -l app=redis
 3. Check network policies allow traffic between namespaces
 
 
+## Inference Issues
+
+### Upstream Ollama Errors (502 / 503)
+
+If you are receiving upstream errors from Ollama when routing through the platform, you may need to restart the core application workloads to ensure a clean state and proper Linkerd sidecar initialization:
+
+```bash
+# Restart the core application namespaces
+kubectl rollout restart deployment -n auth
+kubectl rollout restart deployment -n ratelimit
+kubectl rollout restart deployment -n inference
+```
+
 ## Common Issues
 
 ### Pod Stuck in Pending
