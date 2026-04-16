@@ -13,7 +13,6 @@ resource "google_compute_instance" "bastion" {
 
   network_interface {
     subnetwork = var.bastion_subnet
-    access_config {}
   }
 
   metadata_startup_script = templatefile("${path.module}/bastion.sh", {
