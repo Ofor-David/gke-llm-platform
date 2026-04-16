@@ -62,7 +62,7 @@ github_repo   = "your-username/your-repo"
 repo_owner_id = "your-github-org-id"
 
 # DNS
-dns_name = "xikhub.store"
+dns_name = "your-domain.com"
 ```
 
 ### 3. Plan and Apply

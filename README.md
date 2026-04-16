@@ -14,13 +14,7 @@ A production-grade, self-hosted AI coding assistant platform built on Google Kub
 </div>
 <br/>
 
->**Engineering Case Study:** Read the full story behind this architecture: [The GKE AI Platform That Keeps Your Code Yours](https://www.notion.so/Engineering-Case-Study-The-GKE-AI-Platform-That-Keeps-Your-Code-Yours-29b147aa1ff7805e9eadc6f66d4398bb?source=copy_link)
-
----
-
-### Repository Stats
-
-<img src="https://github-readme-stats.vercel.app/api/top-langs/?username=Ofor-David&repo=gke-llm-platform&layout=compact&theme=transparent&hide_border=true" alt="Top Langs" height="150" />
+**Engineering Case Study:** Read the full story behind this architecture: [The GKE AI Platform That Keeps Your Code Yours](https://www.notion.so/Engineering-Case-Study-The-GKE-AI-Platform-That-Keeps-Your-Code-Yours-29b147aa1ff7805e9eadc6f66d4398bb?source=copy_link)
 
 </div>
 
