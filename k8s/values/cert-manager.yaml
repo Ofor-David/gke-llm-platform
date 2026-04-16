@@ -220,7 +220,7 @@ serviceAccount:
   #   "{{ .Chart.Name }}-helm-chart/version": "{{ .Chart.Version }}"
   # +docs:property
   annotations:
-    iam.gke.io/gcp-service-account: cert-manager-dns@seventh-azimuth-488017-b3.iam.gserviceaccount.com
+    iam.gke.io/gcp-service-account: cert-manager-dns@project-id.iam.gserviceaccount.com
 
   # Optional additional labels to add to the controller's Service Account.
   # +docs:property

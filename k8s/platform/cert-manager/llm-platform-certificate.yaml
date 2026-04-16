@@ -9,6 +9,6 @@ spec:
     name: letsencrypt-prod
     kind: ClusterIssuer
   dnsNames:
-    - api.xikhub.store
-    - argocd.xikhub.store
-    - grafana.xikhub.store
+    - api.your-domain.com
+    - argocd.your-domain.com
+    - grafana.your-domain.com

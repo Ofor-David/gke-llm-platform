@@ -1,5 +1,5 @@
 image:
-  repository: europe-west4-docker.pkg.dev/seventh-azimuth-488017-b3/container-images/ollama
+  repository: europe-west4-docker.pkg.dev/project-id/container-images/ollama
   tag: "0.16.3"
   pullPolicy: IfNotPresent
 
@@ -16,7 +16,7 @@ resources:
 
 metricsExporter:
   image:
-    repository: europe-west4-docker.pkg.dev/seventh-azimuth-488017-b3/container-images/metrics-exporter
+    repository: europe-west4-docker.pkg.dev/project-id/container-images/metrics-exporter
     tag: "b96825677e8766737054d00801c9803ec10bfa49"
   prometheusService: http://kube-prometheus-kube-prome-prometheus.monitoring.svc.cluster.local
   prometheusPort: 9090

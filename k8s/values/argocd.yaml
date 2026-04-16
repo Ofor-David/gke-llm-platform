@@ -43,7 +43,7 @@ crds:
 global:
   # -- Default domain used by all components
   ## Used for ingresses, certificates, SSO, notifications, etc.
-  domain: argocd.xikhub.store
+  domain: argocd.your-domain.com
 
   # -- Runtime class name for all components
   runtimeClassName: ""

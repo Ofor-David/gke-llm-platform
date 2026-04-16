@@ -9,7 +9,7 @@ spec:
       namespace: gateway-api
       sectionName: https  
   hostnames:
-    - api.xikhub.store
+    - api.your-domain.com
   rules:
     - matches:
         - path:
@@ -32,7 +32,7 @@ spec:
       namespace: gateway-api
       sectionName: https  
   hostnames:
-    - grafana.xikhub.store
+    - grafana.your-domain.com
   rules:
     - matches:
         - path:
@@ -55,7 +55,7 @@ spec:
       namespace: gateway-api
       sectionName: https  
   hostnames:
-    - argocd.xikhub.store
+    - argocd.your-domain.com
   rules:
     - matches:
         - path:
@@ -77,9 +77,9 @@ spec:
       namespace: gateway-api
       sectionName: http        # attaches only to the port 80 listener
   hostnames:
-    - "api.xikhub.store"              
-    - "grafana.xikhub.store"
-    - "argocd.xikhub.store"
+    - "api.your-domain.com"              
+    - "grafana.your-domain.com"
+    - "argocd.your-domain.com"
 
   rules:
     - filters:

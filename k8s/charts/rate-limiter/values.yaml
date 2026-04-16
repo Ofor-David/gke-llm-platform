@@ -1,5 +1,5 @@
 image:
-  repository: europe-west4-docker.pkg.dev/seventh-azimuth-488017-b3/container-images/rate-limiter
+  repository: europe-west4-docker.pkg.dev/project-id/container-images/rate-limiter
   tag: "d33e6358b6fac3ba0280136a346708027315222b"
   pullPolicy: IfNotPresent
 

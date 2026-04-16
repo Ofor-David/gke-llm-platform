@@ -8,7 +8,7 @@ Certificates are managed by cert-manager in the `cert-manager` namespace.
 
 - **Linkerd Identity**: Used for mTLS between services
 - **Trust Anchor**: Root CA for Linkerd
-- **LLM Platform**: Application-specific certificates. TLS termination at the Gateway uses Let's Encrypt certificates issued and auto-renewed by cert-manager via DNS-01 challenge against GCP Cloud DNS for the `xikhub.store` domain.
+- **LLM Platform**: Application-specific certificates. TLS termination at the Gateway uses Let's Encrypt certificates issued and auto-renewed by cert-manager via DNS-01 challenge against GCP Cloud DNS for the `your-domain.com` domain.
 
 ### Certificate Rotation
 

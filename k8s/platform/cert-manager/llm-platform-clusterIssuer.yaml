@@ -11,4 +11,4 @@ spec:
     solvers:
       - dns01:
           cloudDNS:
-            project: seventh-azimuth-488017-b3
+            project: project-id
