@@ -98,6 +98,7 @@ resource "google_compute_firewall" "allow_gateway" {
 
   # Allow from anywhere on the internet
   source_ranges = ["0.0.0.0/0"]
+  target_tags = [ "gke-nodes" ]
 }
 
 # Allow GCP health check ranges — required for load balancer
@@ -119,5 +120,6 @@ resource "google_compute_firewall" "allow_health_checks" {
     "130.211.0.0/22",
     "35.191.0.0/16"
   ]
+  target_tags = [ "gke-nodes" ]
 }
 
