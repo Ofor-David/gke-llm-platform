@@ -4,7 +4,7 @@ resource "google_container_node_pool" "system-pool" {
   cluster  = var.gke_cluster_name
 
   node_config {
-    spot  = false
+    spot         = false
     machine_type = var.system_node_type
     disk_size_gb = var.system_node_disk_size
     disk_type    = var.system_node_disk_type
@@ -14,14 +14,26 @@ resource "google_container_node_pool" "system-pool" {
     oauth_scopes = [
       "https://www.googleapis.com/auth/cloud-platform"
     ]
+
+    shielded_instance_config {
+      enable_secure_boot = true
+      enable_integrity_monitoring = true
+    }
     workload_metadata_config {
       mode = "GKE_METADATA" # This enables the Metadata Server
     }
     labels = { pool = "system" }
+    tags   = ["gke-nodes"]
+
   }
   autoscaling {
     min_node_count = 1
     max_node_count = var.max_system_node_count
+  }
+
+  management {
+    auto_upgrade = true
+    auto_repair = true
   }
 }
 resource "google_container_node_pool" "inference-pool" {
@@ -30,7 +42,7 @@ resource "google_container_node_pool" "inference-pool" {
   cluster  = var.gke_cluster_name
 
   node_config {
-    spot  = true
+    spot         = true
     machine_type = var.inference_node_type
     disk_size_gb = var.inference_node_disk_size
     disk_type    = var.inference_node_disk_type
@@ -43,15 +55,26 @@ resource "google_container_node_pool" "inference-pool" {
     workload_metadata_config {
       mode = "GKE_METADATA" # This enables the Metadata Server
     }
+
+    shielded_instance_config {
+      enable_secure_boot = true
+      enable_integrity_monitoring = true
+    }
     taint {
       key    = "pool"
       value  = "inference"
       effect = "NO_SCHEDULE"
     }
     labels = { pool = "inference" }
+    tags   = ["gke-nodes"]
   }
   autoscaling {
     min_node_count = 1
     max_node_count = var.max_inference_node_count
+  }
+
+  management {
+    auto_upgrade = true
+    auto_repair = true
   }
 }
