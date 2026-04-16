@@ -33,7 +33,7 @@ resource "google_container_cluster" "llm_cluster" {
   datapath_provider     = "ADVANCED_DATAPATH" # Corresponds to GKE Dataplane, adds cilium
   enable_shielded_nodes = true
 
-  deletion_protection = false
+  deletion_protection = true
 
   workload_identity_config {
     workload_pool = "${var.project_id}.svc.id.goog"
