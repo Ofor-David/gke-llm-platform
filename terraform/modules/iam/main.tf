@@ -9,7 +9,6 @@ resource "google_project_iam_member" "gke_node_roles" {
     "roles/monitoring.metricWriter",
     "roles/monitoring.viewer",
     "roles/stackdriver.resourceMetadata.writer",
-    "roles/storage.objectAdmin",
     "roles/artifactregistry.reader"
   ])
 
@@ -52,11 +51,20 @@ resource "google_service_account_iam_member" "secrets-wif" {
   role               = "roles/iam.workloadIdentityUser"
   member             = "serviceAccount:${var.project_id}.svc.id.goog[${var.secrets_namespace}/${var.secrets_ksa_name}]"
 }
-resource "google_project_iam_member" "secrets-sa-roles" {
 
-  project = var.project_id
-  role    = "roles/secretmanager.secretAccessor"
-  member  = "serviceAccount:${google_service_account.secrets-sa.email}"
+locals {
+  managed_secrets = [
+    "projects/${var.project_id}/secrets/ollama-api-key",
+    "projects/${var.project_id}/secrets/grafana-admin-password",
+  ]
+}
+
+resource "google_secret_manager_secret_iam_member" "secrets-sa-bindings" {
+  for_each = toset(local.managed_secrets)
+
+  secret_id = each.value
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.secrets-sa.email}"
 }
 
 // DNS
